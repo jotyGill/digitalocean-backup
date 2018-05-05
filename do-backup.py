@@ -15,8 +15,9 @@ import digitalocean
 
 
 def start_backup(droplet):
-    #snap_name = ubu.name + "--auto-backup--" + str(datetime.date.today())
-    snap_name = droplet.name + "--auto-backup--2018-04-12"
+    # snap_name = droplet.name + "--auto-backup--" + \
+        # str(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+    snap_name = droplet.name + "--auto-backup--2018-04-27 12:37:52"
     snap = (droplet.take_snapshot(snap_name, power_off=True))
     print("powered off", droplet.name, "taking snapshot at:", datetime.datetime.now())
     snap_action = droplet.get_action(snap["action"]["id"])
@@ -50,7 +51,7 @@ def find_old_backups(manager, older_than):
         if "--auto-backup--" in each_snapshot.name:
             backed_on = each_snapshot.name[each_snapshot.name.find("--auto-backup--") + 15:]
             print("backed_on", backed_on)
-            backed_on_date = datetime.datetime.strptime(backed_on, "%Y-%m-%d")
+            backed_on_date = datetime.datetime.strptime(backed_on, "%Y-%m-%d %H:%M:%S")
             if backed_on_date < last_backup_to_keep:
                 old_snapshots.append(each_snapshot)
 
@@ -72,14 +73,14 @@ def purge_backups(old_snapshots):
 
 
 def tag_droplet(do_token, droplet_id):
-    tag = digitalocean.Tag(token=do_token, name="--auto-backup--")
-    tag.create()  # create tag if not already created
-    tag.add_droplets([droplet_id])
+    backup_tag = digitalocean.Tag(token=do_token, name="--auto-backup--")
+    backup_tag.create()  # create tag if not already created
+    backup_tag.add_droplets([droplet_id])
 
 
 def list_droplets(manager):
     my_droplets = manager.get_all_droplets()
-    print("Listing all droplets.")
+    print("Listing all droplets:  <droplet-id>   <droplet-name>\n")
     for droplet in my_droplets:
         print(droplet, "\n")
 
@@ -103,10 +104,9 @@ def set_manager(do_token):
 
 def get_token():
     __basefilepath__ = os.path.dirname(os.path.abspath(__file__)) + "/"
-    print("base", __basefilepath__)
     with open(__basefilepath__ + '.token') as do_token_file:
         do_token = json.load(do_token_file)
-        print("token", do_token["token0"])
+        # print("token", do_token["token0"])
     return do_token["token0"]
 
 
@@ -130,12 +130,12 @@ def main(list_all, list_snaps, list_tagged, list_tags, tag, delete_older_than, b
     if list_tags:
         print("All available tags are :", manager.get_all_tags())
     if tag:
-        tag_droplet(tag)
+        tag_droplet(do_token, tag)
         tagged_droplets = get_tagged(manager, tag_name="--auto-backup--")
         print("Now, the tagged droplets are:\n", tagged_droplets)
-    if delete_older_than:
+    if delete_older_than or delete_older_than == 0:     # even accept value of 0
         old_backups = find_old_backups(manager, delete_older_than)
-        purge_backups(old_backups)
+        # purge_backups(old_backups)
     if backup:
         droplet = manager.get_droplet(backup)
         snap_action = start_backup(droplet)
@@ -143,6 +143,19 @@ def main(list_all, list_snaps, list_tagged, list_tags, tag, delete_older_than, b
         turn_it_on(droplet)
         if not snap_done:
             print("ERROR: SNAPSHOT FAILED")
+    if backup_all:
+        snap_actions = []
+        tagged_droplets = get_tagged(manager, tag_name="--auto-backup--")
+        for drop in tagged_droplets:
+            droplet = manager.get_droplet(drop.id)
+            snap_action = start_backup(droplet)
+            snap_actions.append(snap_action)
+        print("Backups Started, snap_actions:", snap_actions)
+        for snap_action in snap_actions:
+            snap_done = snap_completed(snap_action)
+            turn_it_on(droplet)
+            if not snap_done:
+                print("ERROR: SNAPSHOT FAILED")
 
 
 if __name__ == '__main__':
@@ -163,7 +176,7 @@ if __name__ == '__main__':
     parser.add_argument('--backup', dest='backup', type=str,
                         help='Shutdown Backup Then Restart the given droplet')
     parser.add_argument('--backup-all', dest='backup_all',
-                        help='Shutdown Backup Then Restart all tagged droplets')
+                        help='Shutdown Backup Then Restart all tagged droplets', action='store_true')
 
     args = parser.parse_args()
 
