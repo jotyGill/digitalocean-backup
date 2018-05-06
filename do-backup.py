@@ -15,11 +15,12 @@ import digitalocean
 
 
 def start_backup(droplet):
-    # snap_name = droplet.name + "--auto-backup--" + \
-        # str(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
-    snap_name = droplet.name + "--auto-backup--2018-04-27 12:37:52"
+    snap_name = droplet.name + "--auto-backup--" + \
+        str(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+    # snap_name = droplet.name + "--auto-backup--2018-05-02 12:37:52"
+    print("Powering Off :", droplet.name, "\n")
     snap = (droplet.take_snapshot(snap_name, power_off=True))
-    print("powered off", droplet.name, "taking snapshot at:", datetime.datetime.now())
+    print("powered off", droplet.name, "taking snapshot at:", datetime.datetime.now(), "\n")
     snap_action = droplet.get_action(snap["action"]["id"])
     return snap_action
 
@@ -37,9 +38,9 @@ def snap_completed(snap_action):
 def turn_it_on(droplet):
     powered_up = droplet.power_on()
     if powered_up:
-        print("powered back on")
+        print(droplet, "Powered Back Up")
     else:
-        print("Did not power back on")
+        print(droplet, "ERROR: DID NOT POWER UP")
 
 
 def find_old_backups(manager, older_than):
@@ -144,16 +145,17 @@ def main(list_all, list_snaps, list_tagged, list_tags, tag, delete_older_than, b
         if not snap_done:
             print("ERROR: SNAPSHOT FAILED")
     if backup_all:
-        snap_actions = []
+        snap_and_drop_ids = []   # stores all {"snap_action": snap_action, "droplet_id": droplet}
         tagged_droplets = get_tagged(manager, tag_name="--auto-backup--")
         for drop in tagged_droplets:
             droplet = manager.get_droplet(drop.id)
             snap_action = start_backup(droplet)
-            snap_actions.append(snap_action)
-        print("Backups Started, snap_actions:", snap_actions)
-        for snap_action in snap_actions:
-            snap_done = snap_completed(snap_action)
-            turn_it_on(droplet)
+            snap_and_drop_ids.append({"snap_action": snap_action, "droplet_id": droplet.id})
+        print("Backups Started, snap_and_drop_ids:", snap_and_drop_ids)
+        for snap_id_pair in snap_and_drop_ids:
+            snap_done = snap_completed(snap_id_pair["snap_action"])
+            # print("snap_action and droplet_id", snap_id_pair)
+            turn_it_on(manager.get_droplet(snap_id_pair["droplet_id"]))
             if not snap_done:
                 print("ERROR: SNAPSHOT FAILED")
 
