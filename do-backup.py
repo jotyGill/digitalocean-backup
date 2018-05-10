@@ -73,10 +73,15 @@ def purge_backups(old_snapshots):
         print("No snapshot is old enough to delete")
 
 
-def tag_droplet(do_token, droplet_id):
-    backup_tag = digitalocean.Tag(token=do_token, name="--auto-backup--")
+def tag_droplet(do_token, droplet_id, tag_name):
+    backup_tag = digitalocean.Tag(token=do_token, name=tag_name)
     backup_tag.create()  # create tag if not already created
     backup_tag.add_droplets([droplet_id])
+
+
+def untag_dorplet(do_token, droplet_id, tag_name):
+    backup_tag = digitalocean.Tag(token=do_token, name=tag_name)
+    backup_tag.remove_droplets([droplet_id])
 
 
 def list_droplets(manager):
@@ -111,7 +116,8 @@ def get_token():
     return do_token["token0"]
 
 
-def main(list_all, list_snaps, list_tagged, list_tags, tag, delete_older_than, backup, backup_all):
+def main(list_all, list_snaps, list_tagged, list_tags, list_older_than, tag,
+         tag_name, delete_older_than, backup, backup_all):
     do_token = get_token()
     manager = set_manager(do_token)
     # ubu = manager.get_droplet(92043470)
@@ -126,17 +132,20 @@ def main(list_all, list_snaps, list_tagged, list_tags, tag, delete_older_than, b
     if list_snaps:
         list_snapshots(manager)
     if list_tagged:
-        tagged_droplets = get_tagged(manager, tag_name="--auto-backup--")
+        tagged_droplets = get_tagged(manager, tag_name=tag_name)
         print("Listing all the tagged droplets :\n", tagged_droplets)
     if list_tags:
         print("All available tags are :", manager.get_all_tags())
     if tag:
-        tag_droplet(do_token, tag)
-        tagged_droplets = get_tagged(manager, tag_name="--auto-backup--")
+        tag_droplet(do_token, tag, tag_name)
+        tagged_droplets = get_tagged(manager, tag_name=tag_name)
         print("Now, the tagged droplets are:\n", tagged_droplets)
-    if delete_older_than or delete_older_than == 0:     # even accept value of 0
+    if delete_older_than or delete_older_than == 0:     # even accept value 0
         old_backups = find_old_backups(manager, delete_older_than)
         # purge_backups(old_backups)
+        print("Delete them")
+    if list_older_than or list_older_than == 0:
+        old_backups = find_old_backups(manager, list_older_than)
     if backup:
         droplet = manager.get_droplet(backup)
         snap_action = start_backup(droplet)
@@ -146,7 +155,7 @@ def main(list_all, list_snaps, list_tagged, list_tags, tag, delete_older_than, b
             print("ERROR: SNAPSHOT FAILED")
     if backup_all:
         snap_and_drop_ids = []   # stores all {"snap_action": snap_action, "droplet_id": droplet}
-        tagged_droplets = get_tagged(manager, tag_name="--auto-backup--")
+        tagged_droplets = get_tagged(manager, tag_name=tag_name)
         for drop in tagged_droplets:
             droplet = manager.get_droplet(drop.id)
             snap_action = start_backup(droplet)
@@ -171,8 +180,12 @@ if __name__ == '__main__':
                         help='List droplets with "--auto-backup--" tag, these will be backedup', action='store_true')
     parser.add_argument('--list-tags', dest='list_tags',
                         help='List all used tags', action='store_true')
+    parser.add_argument('--list-older-than', dest='list_older_than', type=int,
+                        help='List snaps older than, in days')
     parser.add_argument('--tag', dest='tag', type=str,
-                        help='Add tag "--auto-backup--" to the provided droplet id')
+                        help='Add tag to the provided droplet id')
+    parser.add_argument('--tag-name', dest='tag_name', type=str,
+                        help='Set tag name', default='--auto-backup--')
     parser.add_argument('--delete-older-than', dest='delete_older_than',
                         type=int, help='Delete backups older than')
     parser.add_argument('--backup', dest='backup', type=str,
@@ -183,4 +196,5 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     main(args.list_all, args.list_snaps, args.list_tagged, args.list_tags,
-         args.tag, args.delete_older_than, args.backup, args.backup_all)
+         args.list_older_than, args.tag, args.tag_name, args.delete_older_than,
+         args.backup, args.backup_all)
