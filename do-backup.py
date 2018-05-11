@@ -51,12 +51,13 @@ def find_old_backups(manager, older_than):
         # print(each_snapshot.name, each_snapshot.created_at, each_snapshot.id)
         if "--auto-backup--" in each_snapshot.name:
             backed_on = each_snapshot.name[each_snapshot.name.find("--auto-backup--") + 15:]
-            print("backed_on", backed_on)
+            # print("backed_on", backed_on)
             backed_on_date = datetime.datetime.strptime(backed_on, "%Y-%m-%d %H:%M:%S")
             if backed_on_date < last_backup_to_keep:
                 old_snapshots.append(each_snapshot)
+                print(each_snapshot)
 
-    print("OLD SNAPSHOTS", old_snapshots)
+    # print("OLD SNAPSHOTS", old_snapshots)
     return old_snapshots
 
 
@@ -79,7 +80,7 @@ def tag_droplet(do_token, droplet_id, tag_name):
     backup_tag.add_droplets([droplet_id])
 
 
-def untag_dorplet(do_token, droplet_id, tag_name):
+def untag_droplet(do_token, droplet_id, tag_name):
     backup_tag = digitalocean.Tag(token=do_token, name=tag_name)
     backup_tag.remove_droplets([droplet_id])
 
@@ -117,7 +118,7 @@ def get_token():
 
 
 def main(list_all, list_snaps, list_tagged, list_tags, list_older_than, tag,
-         tag_name, delete_older_than, backup, backup_all):
+         untag, tag_name, delete_older_than, backup, backup_all):
     do_token = get_token()
     manager = set_manager(do_token)
     # ubu = manager.get_droplet(92043470)
@@ -139,13 +140,23 @@ def main(list_all, list_snaps, list_tagged, list_tags, list_older_than, tag,
     if tag:
         tag_droplet(do_token, tag, tag_name)
         tagged_droplets = get_tagged(manager, tag_name=tag_name)
-        print("Now, the tagged droplets are:\n", tagged_droplets)
+        print("Now, droplets tagged with :",
+              tag_name, "are :\n", tagged_droplets)
+    if untag:   # broken
+        untag_droplet(do_token, tag, tag_name)
+        tagged_droplets = get_tagged(manager, tag_name=tag_name)
+        print("Now, droplets tagged with :",
+              tag_name, "are :\n", tagged_droplets)
     if delete_older_than or delete_older_than == 0:     # even accept value 0
+        print("Snapshots older than", list_older_than,
+              "days, with '--auto-backup--' in their name are :\n")
         old_backups = find_old_backups(manager, delete_older_than)
         # purge_backups(old_backups)
         print("Delete them")
     if list_older_than or list_older_than == 0:
-        old_backups = find_old_backups(manager, list_older_than)
+        print("Snapshots older than", list_older_than,
+              "days, with '--auto-backup--' in their name are :\n")
+        find_old_backups(manager, list_older_than)
     if backup:
         droplet = manager.get_droplet(backup)
         snap_action = start_backup(droplet)
@@ -184,6 +195,8 @@ if __name__ == '__main__':
                         help='List snaps older than, in days')
     parser.add_argument('--tag', dest='tag', type=str,
                         help='Add tag to the provided droplet id')
+    parser.add_argument('--untag', dest='untag', type=str,
+                        help='Remove tag from the provided droplet id')
     parser.add_argument('--tag-name', dest='tag_name', type=str,
                         help='Set tag name', default='--auto-backup--')
     parser.add_argument('--delete-older-than', dest='delete_older_than',
@@ -196,5 +209,5 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     main(args.list_all, args.list_snaps, args.list_tagged, args.list_tags,
-         args.list_older_than, args.tag, args.tag_name, args.delete_older_than,
-         args.backup, args.backup_all)
+         args.list_older_than, args.tag, args.untag, args.tag_name,
+         args.delete_older_than, args.backup, args.backup_all)
