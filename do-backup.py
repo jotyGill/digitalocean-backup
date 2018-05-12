@@ -3,7 +3,9 @@
 import argparse
 import datetime
 import json
+import logging
 import os
+import sys
 import time
 
 import digitalocean
@@ -18,9 +20,9 @@ def start_backup(droplet):
     snap_name = droplet.name + "--auto-backup--" + \
         str(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
     # snap_name = droplet.name + "--auto-backup--2018-05-02 12:37:52"
-    print("Powering Off :", droplet.name, "\n")
+    log.info("Powering Off : " + str(droplet))
     snap = (droplet.take_snapshot(snap_name, power_off=True))
-    print("powered off", droplet.name, "taking snapshot at:", datetime.datetime.now(), "\n")
+    log.info("Powered Off " + str(droplet) + " Taking Snapshot")
     snap_action = droplet.get_action(snap["action"]["id"])
     return snap_action
 
@@ -28,19 +30,19 @@ def start_backup(droplet):
 def snap_completed(snap_action):
     snap_outcome = snap_action.wait(update_every_seconds=3)
     if snap_outcome:
-        print(snap_action, "Snapshot completed at :", datetime.datetime.now())
+        log.info(str(snap_action) + " Snapshot Completed")
         return True
     else:
-        print(snap_action, "Snapshot Errored Out")
+        log.error("SNAPSHOT FAILED" + str(snap_action))
         return False
 
 
 def turn_it_on(droplet):
     powered_up = droplet.power_on()
     if powered_up:
-        print(droplet, "Powered Back Up")
+        log.info("Powered Back Up " + str(droplet))
     else:
-        print(droplet, "ERROR: DID NOT POWER UP")
+        log.critical("DID NOT POWER UP " + str(droplet))
 
 
 def find_old_backups(manager, older_than):
@@ -64,14 +66,14 @@ def find_old_backups(manager, older_than):
 def purge_backups(old_snapshots):
     if old_snapshots:   # list not empty
         for each_snapshot in old_snapshots:
-            print("Deleting old snapshot:", each_snapshot)
+            log.warning("Deleting Old Snapshot: " + str(each_snapshot))
             destroyed = each_snapshot.destroy()
             if destroyed:
-                print("successfully destroyed the snapshot")
+                log.info("Successfully Destroyed The Snapshot")
             else:
-                print("Error destroying the snapshot", each_snapshot)
+                log.error("COULD NOT DESTROY SNAPSHOT " + str(each_snapshot))
     else:
-        print("No snapshot is old enough to delete")
+        log.info("No Snapshot Is Old Enough To be Deleted")
 
 
 def tag_droplet(do_token, droplet_id, tag_name):
@@ -87,9 +89,9 @@ def untag_droplet(do_token, droplet_id, tag_name):
 
 def list_droplets(manager):
     my_droplets = manager.get_all_droplets()
-    print("Listing all droplets:  <droplet-id>   <droplet-name>\n")
+    log.info("Listing All Droplets:  <droplet-id>   <droplet-name>\n")
     for droplet in my_droplets:
-        print(droplet, "\n")
+        log.info(droplet)
 
 
 def get_tagged(manager, tag_name):
@@ -99,9 +101,10 @@ def get_tagged(manager, tag_name):
 
 def list_snapshots(manager):
     all_snaps = manager.get_all_snapshots()
-    print("All available snapshots are : <snapshot-id>   <snapshot-name>\n")
+    log.info("All Available Snapshots Are : <snapshot-id>   <snapshot-name>\n")
+    all_snaps.sort()
     for snap in all_snaps:
-        print(snap)
+        log.info(snap)
 
 
 def set_manager(do_token):
@@ -111,14 +114,18 @@ def set_manager(do_token):
 
 def get_token():
     __basefilepath__ = os.path.dirname(os.path.abspath(__file__)) + "/"
-    with open(__basefilepath__ + '.token') as do_token_file:
-        do_token = json.load(do_token_file)
-        # print("token", do_token["token0"])
-    return do_token["token0"]
+    try:
+        with open(__basefilepath__ + '.token') as do_token_file:
+            do_token = json.load(do_token_file)
+            # print("token", do_token["token0"])
+        return do_token["token0"]
+    except FileNotFoundError:
+        log.error("FileNotFoundError: Please Store The DO Access Token in .token file")
 
 
 def main(list_all, list_snaps, list_tagged, list_tags, list_older_than, tag,
          untag, tag_name, delete_older_than, backup, backup_all):
+    log.info("-------------------------START-------------------------\n\n")
     do_token = get_token()
     manager = set_manager(do_token)
     # ubu = manager.get_droplet(92043470)
@@ -134,28 +141,29 @@ def main(list_all, list_snaps, list_tagged, list_tags, list_older_than, tag,
         list_snapshots(manager)
     if list_tagged:
         tagged_droplets = get_tagged(manager, tag_name=tag_name)
-        print("Listing all the tagged droplets :\n", tagged_droplets)
+        log.info("Listing All The Tagged Droplets :")
+        log.info(tagged_droplets)
     if list_tags:
-        print("All available tags are :", manager.get_all_tags())
+        log.info("All Available Tags Are : " + str(manager.get_all_tags()))
     if tag:
         tag_droplet(do_token, tag, tag_name)
         tagged_droplets = get_tagged(manager, tag_name=tag_name)
-        print("Now, droplets tagged with :",
-              tag_name, "are :\n", tagged_droplets)
+        log.info("Now, Droplets Tagged With : " + tag_name + " Are :")
+        log.info(tagged_droplets)
     if untag:   # broken
         untag_droplet(do_token, tag, tag_name)
         tagged_droplets = get_tagged(manager, tag_name=tag_name)
-        print("Now, droplets tagged with :",
-              tag_name, "are :\n", tagged_droplets)
+        log.info("Now, droplets tagged with : " + tag_name + " are :")
+        log.info(tagged_droplets)
     if delete_older_than or delete_older_than == 0:     # even accept value 0
-        print("Snapshots older than", list_older_than,
-              "days, with '--auto-backup--' in their name are :\n")
+        log.info("Snapshots Older Than" + str(list_older_than) +
+                 " Days, With '--auto-backup--' In Their Name Are :")
         old_backups = find_old_backups(manager, delete_older_than)
         # purge_backups(old_backups)
         print("Delete them")
     if list_older_than or list_older_than == 0:
-        print("Snapshots older than", list_older_than,
-              "days, with '--auto-backup--' in their name are :\n")
+        log.info("Snapshots Older Than" + str(list_older_than) +
+                 " Days, With '--auto-backup--' In Their Name Are :")
         find_old_backups(manager, list_older_than)
     if backup:
         droplet = manager.get_droplet(backup)
@@ -163,7 +171,7 @@ def main(list_all, list_snaps, list_tagged, list_tags, list_older_than, tag,
         snap_done = snap_completed(snap_action)
         turn_it_on(droplet)
         if not snap_done:
-            print("ERROR: SNAPSHOT FAILED")
+            log.error("SNAPSHOT FAILED " + str(snap_action) + str(droplet))
     if backup_all:
         snap_and_drop_ids = []   # stores all {"snap_action": snap_action, "droplet_id": droplet}
         tagged_droplets = get_tagged(manager, tag_name=tag_name)
@@ -171,16 +179,27 @@ def main(list_all, list_snaps, list_tagged, list_tags, list_older_than, tag,
             droplet = manager.get_droplet(drop.id)
             snap_action = start_backup(droplet)
             snap_and_drop_ids.append({"snap_action": snap_action, "droplet_id": droplet.id})
-        print("Backups Started, snap_and_drop_ids:", snap_and_drop_ids)
+        log.info("Backups Started, snap_and_drop_ids:" + str(snap_and_drop_ids))
         for snap_id_pair in snap_and_drop_ids:
             snap_done = snap_completed(snap_id_pair["snap_action"])
             # print("snap_action and droplet_id", snap_id_pair)
             turn_it_on(manager.get_droplet(snap_id_pair["droplet_id"]))
             if not snap_done:
-                print("ERROR: SNAPSHOT FAILED")
+                log.error("SNAPSHOT FAILED " + str(snap_action) + str(droplet))
+    log.info("\n\n")
+    log.info("---------------------------END----------------------------")
 
 
 if __name__ == '__main__':
+    logging.basicConfig(
+        format="%(asctime)s [%(levelname)-5.5s]  %(message)s",
+        handlers=[
+            # logging.FileHandler(logging.FileHandler(filename, mode='a', encoding=None, delay=False),
+            logging.StreamHandler(sys.stdout)
+        ],
+        level="INFO")
+    log = logging.getLogger()
+
     parser = argparse.ArgumentParser(
         description='Automated offline snapshots of digitalocean droplets')
     parser.add_argument('--list-all', dest='list_all',
