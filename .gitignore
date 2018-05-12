@@ -2,12 +2,14 @@
 token
 test*
 *.log
-do-backup/*.log
-do-backup/.token
-do-backup/test*
-do-backup/token
 
 dobackup/*.log
 dobackup/.token
 dobackup/test*
 dobackup/token
+
+__pycache__
+dobackup.egg*
+build
+dist
+deb_dist
