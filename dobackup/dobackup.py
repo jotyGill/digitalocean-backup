@@ -4,13 +4,11 @@ import argparse
 import datetime
 import json
 import logging
-import os
 import sys
-import time
 
 import digitalocean
 
-from dobackup import __basefilepath__
+from dobackup import __basefilepath__, __version__
 
 logging.basicConfig(
     format="%(asctime)s [%(levelname)-5.5s]  %(message)s",
@@ -26,6 +24,7 @@ log = logging.getLogger()
 def main():
     parser = argparse.ArgumentParser(
         description='Automated offline snapshots of digitalocean droplets')
+    parser.add_argument('-v', '--version', action='version', version="dobackup " + __version__)
     parser.add_argument('--init', dest='init',
                         help='Save token to .token file', action='store_true')
     parser.add_argument('--list-all', dest='list_all',
