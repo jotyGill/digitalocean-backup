@@ -2,3 +2,4 @@
 token
 test.py
 test*
+*.log

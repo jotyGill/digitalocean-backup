@@ -16,15 +16,21 @@ import digitalocean
 # manager2 = digitalocean.droplet.get
 
 
-def save_token():
+def set_token():
     token_str = input("Paste The Digital Ocean's Token to Be Stored In .token File : ")
     if len(token_str) != 64:
         log.error("Is It Really A Token Though? The Length Should Be 64")
         sys.exit()
     tocken_dic = {"token0": token_str}
-    with open('.token', 'w') as token_file:
-        json.dump(tocken_dic, token_file)
+
+    __basefilepath__ = os.path.dirname(os.path.abspath(__file__)) + "/"
+    try:
+        with open(__basefilepath__ + '.token', 'w') as token_file:
+            json.dump(tocken_dic, token_file)
         log.info("The Token Has Been Stored In .token File")
+    except FileNotFoundError:
+        log.error("FileNotFoundError: SOMETHING WRONG WITH THE PATH TO '.token'")
+        sys.exit()
 
 
 def start_backup(droplet):
@@ -131,14 +137,15 @@ def get_token():
             # print("token", do_token["token0"])
         return do_token["token0"]
     except FileNotFoundError:
-        log.error("FileNotFoundError: Please Store The DO Access Token in .token file")
+        log.error("FileNotFoundError: PLEASE STORE THE DO ACCESS TOKEN USING '--init'")
+        sys.exit()
 
 
 def main(init, list_all, list_snaps, list_tagged, list_tags, list_older_than,
-         tag, untag, tag_name, delete_older_than, backup, backup_all):
+         tag_server, untag, tag_name, delete_older_than, backup, backup_all):
     log.info("-------------------------START-------------------------\n\n")
     if init:
-        save_token()
+        set_token()
 
     do_token = get_token()
     manager = set_manager(do_token)
@@ -154,13 +161,13 @@ def main(init, list_all, list_snaps, list_tagged, list_tags, list_older_than,
     if list_tags:
         # Currently broken
         log.info("All Available Tags Are : " + str(manager.get_all_tags()))
-    if tag:
-        tag_droplet(do_token, tag, tag_name)
+    if tag_server:
+        tag_droplet(do_token, tag_server, tag_name)
         tagged_droplets = get_tagged(manager, tag_name=tag_name)
         log.info("Now, Droplets Tagged With : " + tag_name + " Are :")
         log.info(tagged_droplets)
     if untag:   # broken
-        untag_droplet(do_token, tag, tag_name)
+        untag_droplet(do_token, tag_server, tag_name)
         tagged_droplets = get_tagged(manager, tag_name=tag_name)
         log.info("Now, droplets tagged with : " + tag_name + " are :")
         log.info(tagged_droplets)
@@ -184,26 +191,30 @@ def main(init, list_all, list_snaps, list_tagged, list_tags, list_older_than,
     if backup_all:
         snap_and_drop_ids = []   # stores all {"snap_action": snap_action, "droplet_id": droplet}
         tagged_droplets = get_tagged(manager, tag_name=tag_name)
-        for drop in tagged_droplets:
-            droplet = manager.get_droplet(drop.id)
-            snap_action = start_backup(droplet)
-            snap_and_drop_ids.append({"snap_action": snap_action, "droplet_id": droplet.id})
-        log.info("Backups Started, snap_and_drop_ids:" + str(snap_and_drop_ids))
-        for snap_id_pair in snap_and_drop_ids:
-            snap_done = snap_completed(snap_id_pair["snap_action"])
-            # print("snap_action and droplet_id", snap_id_pair)
-            turn_it_on(manager.get_droplet(snap_id_pair["droplet_id"]))
-            if not snap_done:
-                log.error("SNAPSHOT FAILED " + str(snap_action) + str(droplet))
-    log.info("\n\n")
+
+        if tagged_droplets:  # doplets found with the --tag-name
+            for drop in tagged_droplets:
+                droplet = manager.get_droplet(drop.id)
+                snap_action = start_backup(droplet)
+                snap_and_drop_ids.append({"snap_action": snap_action, "droplet_id": droplet.id})
+            log.info("Backups Started, snap_and_drop_ids:" + str(snap_and_drop_ids))
+            for snap_id_pair in snap_and_drop_ids:
+                snap_done = snap_completed(snap_id_pair["snap_action"])
+                # print("snap_action and droplet_id", snap_id_pair)
+                turn_it_on(manager.get_droplet(snap_id_pair["droplet_id"]))
+                if not snap_done:
+                    log.error("SNAPSHOT FAILED " + str(snap_action) + str(droplet))
+        else:  # no doplets with the --tag-name
+            log.warning("NO DROPLET FOUND WITH THE TAG NAME")
     log.info("---------------------------END----------------------------")
+    log.info("\n\n")
 
 
 if __name__ == '__main__':
     logging.basicConfig(
         format="%(asctime)s [%(levelname)-5.5s]  %(message)s",
         handlers=[
-            logging.FileHandler(logging.FileHandler(filename, mode='a', encoding=None, delay=False)),
+            logging.FileHandler("./do-backup.log", mode='a', encoding=None, delay=False),
             logging.StreamHandler(sys.stdout)
         ],
         level="INFO")
@@ -218,12 +229,14 @@ if __name__ == '__main__':
     parser.add_argument('--list-snaps', dest='list_snaps',
                         help='List all snapshots', action='store_true')
     parser.add_argument('--list-tagged', dest='list_tagged',
-                        help='List droplets with "--auto-backup--" tag, these will be backedup', action='store_true')
+                        help='List droplets with "auto-backup" tag, these will be backed up\
+    when "--backup-all" is supplied and no "--tag-name" is provided',
+                        action='store_true')
     parser.add_argument('--list-tags', dest='list_tags',
                         help='List all used tags', action='store_true')
     parser.add_argument('--list-older-than', dest='list_older_than', type=int,
                         help='List snaps older than, in days')
-    parser.add_argument('--tag', dest='tag', type=str,
+    parser.add_argument('--tag-server', dest='tag_server', type=str,
                         help='Add tag to the provided droplet id')
     parser.add_argument('--untag', dest='untag', type=str,
                         help='Remove tag from the provided droplet id')
@@ -239,5 +252,5 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     main(args.init, args.list_all, args.list_snaps, args.list_tagged,
-         args.list_tags, args.list_older_than, args.tag, args.untag,
+         args.list_tags, args.list_older_than, args.tag_server, args.untag,
          args.tag_name, args.delete_older_than, args.backup, args.backup_all)
