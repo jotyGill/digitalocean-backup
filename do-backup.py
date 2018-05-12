@@ -175,7 +175,7 @@ def main(init, list_all, list_snaps, list_tagged, list_tags, list_older_than,
         log.info("Snapshots Older Than" + str(list_older_than) +
                  " Days, With '--auto-backup--' In Their Name Are :")
         old_backups = find_old_backups(manager, delete_older_than)
-        # purge_backups(old_backups)
+        purge_backups(old_backups)
         print("Delete them")
     if list_older_than or list_older_than == 0:
         log.info("Snapshots Older Than" + str(list_older_than) +
@@ -229,8 +229,7 @@ if __name__ == '__main__':
     parser.add_argument('--list-snaps', dest='list_snaps',
                         help='List all snapshots', action='store_true')
     parser.add_argument('--list-tagged', dest='list_tagged',
-                        help='List droplets with "auto-backup" tag, these will be backed up\
-    when "--backup-all" is supplied and no "--tag-name" is provided',
+                        help='List droplets using "--tag-name"',
                         action='store_true')
     parser.add_argument('--list-tags', dest='list_tags',
                         help='List all used tags', action='store_true')
@@ -241,13 +240,15 @@ if __name__ == '__main__':
     parser.add_argument('--untag', dest='untag', type=str,
                         help='Remove tag from the provided droplet id')
     parser.add_argument('--tag-name', dest='tag_name', type=str,
-                        help='Set tag name', default='auto-backup')
+                        help='To be used with "--list-tags" and "--backup-all",\
+                         default value is "auto-backup"', default='auto-backup')
     parser.add_argument('--delete-older-than', dest='delete_older_than',
-                        type=int, help='Delete backups older than')
+                        type=int, help='Delete backups older than, in days')
     parser.add_argument('--backup', dest='backup', type=str,
-                        help='Shutdown Backup Then Restart the given droplet')
+                        help='Shutdown, Backup, Then Restart the given droplet using id')
     parser.add_argument('--backup-all', dest='backup_all',
-                        help='Shutdown Backup Then Restart all tagged droplets', action='store_true')
+                        help='Shutdown, Backup, Then Restart all droplets with "--tag-name"',
+                        action='store_true')
 
     args = parser.parse_args()
 
