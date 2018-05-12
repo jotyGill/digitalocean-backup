@@ -3,3 +3,5 @@ token
 test.py
 test*
 *.log
+do-backup/*.log
+do-backup/.token
