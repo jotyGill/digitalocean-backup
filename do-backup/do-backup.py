@@ -10,6 +10,8 @@ import time
 
 import digitalocean
 
+from dobackup import __basefilepath__
+
 # actions = droplet.get_actions()
 # for action in actions:
 #     print(action.status)
@@ -214,7 +216,7 @@ if __name__ == '__main__':
     logging.basicConfig(
         format="%(asctime)s [%(levelname)-5.5s]  %(message)s",
         handlers=[
-            logging.FileHandler("./do-backup.log", mode='a', encoding=None, delay=False),
+            logging.FileHandler("./dobackup.log", mode='a', encoding=None, delay=False),
             logging.StreamHandler(sys.stdout)
         ],
         level="INFO")

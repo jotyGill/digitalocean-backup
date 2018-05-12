@@ -6,3 +6,8 @@ do-backup/*.log
 do-backup/.token
 do-backup/test*
 do-backup/token
+
+dobackup/*.log
+dobackup/.token
+dobackup/test*
+dobackup/token
