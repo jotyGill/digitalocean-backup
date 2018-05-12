@@ -16,6 +16,17 @@ import digitalocean
 # manager2 = digitalocean.droplet.get
 
 
+def save_token():
+    token_str = input("Paste The Digital Ocean's Token to Be Stored In .token File : ")
+    if len(token_str) != 64:
+        log.error("Is It Really A Token Though? The Length Should Be 64")
+        sys.exit()
+    tocken_dic = {"token0": token_str}
+    with open('.token', 'w') as token_file:
+        json.dump(tocken_dic, token_file)
+        log.info("The Token Has Been Stored In .token File")
+
+
 def start_backup(droplet):
     snap_name = droplet.name + "--auto-backup--" + \
         str(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
@@ -82,7 +93,7 @@ def tag_droplet(do_token, droplet_id, tag_name):
     backup_tag.add_droplets([droplet_id])
 
 
-def untag_droplet(do_token, droplet_id, tag_name):
+def untag_droplet(do_token, droplet_id, tag_name):      # Currely broken
     backup_tag = digitalocean.Tag(token=do_token, name=tag_name)
     backup_tag.remove_droplets([droplet_id])
 
@@ -123,17 +134,14 @@ def get_token():
         log.error("FileNotFoundError: Please Store The DO Access Token in .token file")
 
 
-def main(list_all, list_snaps, list_tagged, list_tags, list_older_than, tag,
-         untag, tag_name, delete_older_than, backup, backup_all):
+def main(init, list_all, list_snaps, list_tagged, list_tags, list_older_than,
+         tag, untag, tag_name, delete_older_than, backup, backup_all):
     log.info("-------------------------START-------------------------\n\n")
+    if init:
+        save_token()
+
     do_token = get_token()
     manager = set_manager(do_token)
-    # ubu = manager.get_droplet(92043470)
-
-    # snap_action = start_backup(ubu)
-    # snap_done = snap_completed(snap_action)
-    # turn_it_on(ubu)
-    # print("All available tags are :", manager.get_all_tags())
 
     if list_all:
         list_droplets(manager)
@@ -144,6 +152,7 @@ def main(list_all, list_snaps, list_tagged, list_tags, list_older_than, tag,
         log.info("Listing All The Tagged Droplets :")
         log.info(tagged_droplets)
     if list_tags:
+        # Currently broken
         log.info("All Available Tags Are : " + str(manager.get_all_tags()))
     if tag:
         tag_droplet(do_token, tag, tag_name)
@@ -194,7 +203,7 @@ if __name__ == '__main__':
     logging.basicConfig(
         format="%(asctime)s [%(levelname)-5.5s]  %(message)s",
         handlers=[
-            # logging.FileHandler(logging.FileHandler(filename, mode='a', encoding=None, delay=False),
+            logging.FileHandler(logging.FileHandler(filename, mode='a', encoding=None, delay=False)),
             logging.StreamHandler(sys.stdout)
         ],
         level="INFO")
@@ -202,6 +211,8 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(
         description='Automated offline snapshots of digitalocean droplets')
+    parser.add_argument('--init', dest='init',
+                        help='Save token to .token file', action='store_true')
     parser.add_argument('--list-all', dest='list_all',
                         help='List all droplets', action='store_true')
     parser.add_argument('--list-snaps', dest='list_snaps',
@@ -217,7 +228,7 @@ if __name__ == '__main__':
     parser.add_argument('--untag', dest='untag', type=str,
                         help='Remove tag from the provided droplet id')
     parser.add_argument('--tag-name', dest='tag_name', type=str,
-                        help='Set tag name', default='--auto-backup--')
+                        help='Set tag name', default='auto-backup')
     parser.add_argument('--delete-older-than', dest='delete_older_than',
                         type=int, help='Delete backups older than')
     parser.add_argument('--backup', dest='backup', type=str,
@@ -227,6 +238,6 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    main(args.list_all, args.list_snaps, args.list_tagged, args.list_tags,
-         args.list_older_than, args.tag, args.untag, args.tag_name,
-         args.delete_older_than, args.backup, args.backup_all)
+    main(args.init, args.list_all, args.list_snaps, args.list_tagged,
+         args.list_tags, args.list_older_than, args.tag, args.untag,
+         args.tag_name, args.delete_older_than, args.backup, args.backup_all)
