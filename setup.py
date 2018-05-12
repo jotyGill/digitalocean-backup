@@ -21,20 +21,17 @@ setuptools.setup(
     author='JGill',
     zip_safe=False,
     author_email='joty@mygnu.org',
-    url='https://github.com/jotyGill/dobackup/',
+    url='https://github.com/jotyGill/digitalocean-backup/',
     keywords=[
-        'openvpn wrapper', 'nordvpn', 'nordvpn client', 'secure vpn',
-        'vpn wrapper', 'private vpn', 'privacy'],
+        'backup', 'automated-backup', 'digitalocean', 'digital-ocean',
+        'backups', 'automation'],
     install_requires=['python-digitalocean'],
     platforms=['GNU/Linux', 'Ubuntu', 'Debian', 'Kali', 'CentOS', 'Arch', 'Fedora'],
     packages=setuptools.find_packages(),
     entry_points={
         'console_scripts': [
             'dobackup = dobackup.dobackup:main']},
-    include_package_data=True,
-    exclude_package_data={'dobackup':
-                          ['dobackup/.token', 'dobackup/token',
-                           'dobackup/dobackup.log', '.gitignore']},
+    include_package_data=False,
     long_description=full_description,
     classifiers=[
         'Intended Audience :: End Users/Desktop',

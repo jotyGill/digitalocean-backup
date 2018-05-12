@@ -12,10 +12,53 @@ import digitalocean
 
 from dobackup import __basefilepath__
 
-# actions = droplet.get_actions()
-# for action in actions:
-#     print(action.status)
-# manager2 = digitalocean.droplet.get
+logging.basicConfig(
+    format="%(asctime)s [%(levelname)-5.5s]  %(message)s",
+    handlers=[
+        logging.FileHandler(__basefilepath__ + "dobackup.log",
+                            mode='a', encoding=None, delay=False),
+        logging.StreamHandler(sys.stdout)
+    ],
+    level="INFO")
+log = logging.getLogger()
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        description='Automated offline snapshots of digitalocean droplets')
+    parser.add_argument('--init', dest='init',
+                        help='Save token to .token file', action='store_true')
+    parser.add_argument('--list-all', dest='list_all',
+                        help='List all droplets', action='store_true')
+    parser.add_argument('--list-snaps', dest='list_snaps',
+                        help='List all snapshots', action='store_true')
+    parser.add_argument('--list-tagged', dest='list_tagged',
+                        help='List droplets using "--tag-name"',
+                        action='store_true')
+    parser.add_argument('--list-tags', dest='list_tags',
+                        help='List all used tags', action='store_true')
+    parser.add_argument('--list-older-than', dest='list_older_than', type=int,
+                        help='List snaps older than, in days')
+    parser.add_argument('--tag-server', dest='tag_server', type=str,
+                        help='Add tag to the provided droplet id')
+    parser.add_argument('--untag', dest='untag', type=str,
+                        help='Remove tag from the provided droplet id')
+    parser.add_argument('--tag-name', dest='tag_name', type=str,
+                        help='To be used with "--list-tags" and "--backup-all",\
+                         default value is "auto-backup"', default='auto-backup')
+    parser.add_argument('--delete-older-than', dest='delete_older_than',
+                        type=int, help='Delete backups older than, in days')
+    parser.add_argument('--backup', dest='backup', type=str,
+                        help='Shutdown, Backup, Then Restart the given droplet using id')
+    parser.add_argument('--backup-all', dest='backup_all',
+                        help='Shutdown, Backup, Then Restart all droplets with "--tag-name"',
+                        action='store_true')
+
+    args = parser.parse_args()
+
+    run(args.init, args.list_all, args.list_snaps, args.list_tagged,
+        args.list_tags, args.list_older_than, args.tag_server, args.untag,
+        args.tag_name, args.delete_older_than, args.backup, args.backup_all)
 
 
 def set_token():
@@ -25,7 +68,6 @@ def set_token():
         sys.exit()
     tocken_dic = {"token0": token_str}
 
-    __basefilepath__ = os.path.dirname(os.path.abspath(__file__)) + "/"
     try:
         with open(__basefilepath__ + '.token', 'w') as token_file:
             json.dump(tocken_dic, token_file)
@@ -132,7 +174,6 @@ def set_manager(do_token):
 
 
 def get_token():
-    __basefilepath__ = os.path.dirname(os.path.abspath(__file__)) + "/"
     try:
         with open(__basefilepath__ + '.token') as do_token_file:
             do_token = json.load(do_token_file)
@@ -143,8 +184,8 @@ def get_token():
         sys.exit()
 
 
-def main(init, list_all, list_snaps, list_tagged, list_tags, list_older_than,
-         tag_server, untag, tag_name, delete_older_than, backup, backup_all):
+def run(init, list_all, list_snaps, list_tagged, list_tags, list_older_than,
+        tag_server, untag, tag_name, delete_older_than, backup, backup_all):
     log.info("-------------------------START-------------------------\n\n")
     if init:
         set_token()
@@ -213,47 +254,4 @@ def main(init, list_all, list_snaps, list_tagged, list_tags, list_older_than,
 
 
 if __name__ == '__main__':
-    logging.basicConfig(
-        format="%(asctime)s [%(levelname)-5.5s]  %(message)s",
-        handlers=[
-            logging.FileHandler("./dobackup.log", mode='a', encoding=None, delay=False),
-            logging.StreamHandler(sys.stdout)
-        ],
-        level="INFO")
-    log = logging.getLogger()
-
-    parser = argparse.ArgumentParser(
-        description='Automated offline snapshots of digitalocean droplets')
-    parser.add_argument('--init', dest='init',
-                        help='Save token to .token file', action='store_true')
-    parser.add_argument('--list-all', dest='list_all',
-                        help='List all droplets', action='store_true')
-    parser.add_argument('--list-snaps', dest='list_snaps',
-                        help='List all snapshots', action='store_true')
-    parser.add_argument('--list-tagged', dest='list_tagged',
-                        help='List droplets using "--tag-name"',
-                        action='store_true')
-    parser.add_argument('--list-tags', dest='list_tags',
-                        help='List all used tags', action='store_true')
-    parser.add_argument('--list-older-than', dest='list_older_than', type=int,
-                        help='List snaps older than, in days')
-    parser.add_argument('--tag-server', dest='tag_server', type=str,
-                        help='Add tag to the provided droplet id')
-    parser.add_argument('--untag', dest='untag', type=str,
-                        help='Remove tag from the provided droplet id')
-    parser.add_argument('--tag-name', dest='tag_name', type=str,
-                        help='To be used with "--list-tags" and "--backup-all",\
-                         default value is "auto-backup"', default='auto-backup')
-    parser.add_argument('--delete-older-than', dest='delete_older_than',
-                        type=int, help='Delete backups older than, in days')
-    parser.add_argument('--backup', dest='backup', type=str,
-                        help='Shutdown, Backup, Then Restart the given droplet using id')
-    parser.add_argument('--backup-all', dest='backup_all',
-                        help='Shutdown, Backup, Then Restart all droplets with "--tag-name"',
-                        action='store_true')
-
-    args = parser.parse_args()
-
-    main(args.init, args.list_all, args.list_snaps, args.list_tagged,
-         args.list_tags, args.list_older_than, args.tag_server, args.untag,
-         args.tag_name, args.delete_older_than, args.backup, args.backup_all)
+    main()
