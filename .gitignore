@@ -2,11 +2,7 @@
 token
 test*
 *.log
-
-dobackup/*.log
-dobackup/.token
-dobackup/test*
-dobackup/token
+*.log*
 
 __pycache__
 dobackup.egg*

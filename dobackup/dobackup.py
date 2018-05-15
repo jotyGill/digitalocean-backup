@@ -4,6 +4,7 @@ import argparse
 import datetime
 import json
 import logging
+import logging.handlers
 import sys
 
 import digitalocean
@@ -13,8 +14,8 @@ from dobackup import __basefilepath__, __version__
 logging.basicConfig(
     format="%(asctime)s [%(levelname)-5.5s]  %(message)s",
     handlers=[
-        logging.FileHandler(__basefilepath__ + "dobackup.log",
-                            mode='a', encoding=None, delay=False),
+        logging.handlers.TimedRotatingFileHandler(__basefilepath__ + 'dobackup.log',
+                                                  when='M', interval=2),
         logging.StreamHandler(sys.stdout)
     ],
     level="INFO")
