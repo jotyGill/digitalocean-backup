@@ -44,7 +44,7 @@ def main():
     parser.add_argument('--untag', dest='untag', type=str,
                         help='Remove tag from the provided droplet id')
     parser.add_argument('--tag-name', dest='tag_name', type=str,
-                        help='To be used with "--list-tags" and "--backup-all",\
+                        help='To be used with "--list-tags", "--tag-server" and "--backup-all",\
                          default value is "auto-backup"', default='auto-backup')
     parser.add_argument('--delete-older-than', dest='delete_older_than',
                         type=int, help='Delete backups older than, in days')
