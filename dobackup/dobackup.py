@@ -28,7 +28,7 @@ def main():
     parser.add_argument('-v', '--version', action='version', version="dobackup " + __version__)
     parser.add_argument('--init', dest='init',
                         help='Save token to .token file', action='store_true')
-    parser.add_argument('--list-all', dest='list_all',
+    parser.add_argument('--list-drops', dest='list_drops',
                         help='List all droplets', action='store_true')
     parser.add_argument('--list-snaps', dest='list_snaps',
                         help='List all snapshots', action='store_true')
@@ -56,7 +56,7 @@ def main():
 
     args = parser.parse_args()
 
-    run(args.init, args.list_all, args.list_snaps, args.list_tagged,
+    run(args.init, args.list_drops, args.list_snaps, args.list_tagged,
         args.list_tags, args.list_older_than, args.tag_server, args.untag,
         args.tag_name, args.delete_older_than, args.backup, args.backup_all)
 
@@ -163,7 +163,6 @@ def get_tagged(manager, tag_name):
 def list_snapshots(manager):
     all_snaps = manager.get_all_snapshots()
     log.info("All Available Snapshots Are : <snapshot-id>   <snapshot-name>\n")
-    all_snaps.sort()
     for snap in all_snaps:
         log.info(snap)
 
@@ -191,7 +190,7 @@ def list_all_tags(manager):
         log.info(tag.name)
 
 
-def run(init, list_all, list_snaps, list_tagged, list_tags, list_older_than,
+def run(init, list_drops, list_snaps, list_tagged, list_tags, list_older_than,
         tag_server, untag, tag_name, delete_older_than, backup, backup_all):
     try:
         log.info("-------------------------START-------------------------\n\n")
@@ -201,7 +200,7 @@ def run(init, list_all, list_snaps, list_tagged, list_tags, list_older_than,
         do_token = get_token()
         manager = set_manager(do_token)
 
-        if list_all:
+        if list_drops:
             list_droplets(manager)
         if list_snaps:
             list_snapshots(manager)
@@ -222,13 +221,12 @@ def run(init, list_all, list_snaps, list_tagged, list_tags, list_older_than,
             log.info("Now, droplets tagged with : " + tag_name + " are :")
             log.info(tagged_droplets)
         if delete_older_than or delete_older_than == 0:     # even accept value 0
-            log.info("Snapshots Older Than" + str(list_older_than) +
+            log.info("Snapshots Older Than " + str(delete_older_than) +
                      " Days, With '--auto-backup--' In Their Name Are :")
             old_backups = find_old_backups(manager, delete_older_than)
             purge_backups(old_backups)
-            print("Delete them")
         if list_older_than or list_older_than == 0:
-            log.info("Snapshots Older Than" + str(list_older_than) +
+            log.info("Snapshots Older Than " + str(list_older_than) +
                      " Days, With '--auto-backup--' In Their Name Are :")
             find_old_backups(manager, list_older_than)
         if backup:
