@@ -15,7 +15,7 @@ logging.basicConfig(
     format="%(asctime)s [%(levelname)-5.5s]  %(message)s",
     handlers=[
         logging.handlers.TimedRotatingFileHandler(__basefilepath__ + 'dobackup.log',
-                                                  when='M', interval=2),
+                                                  when='W0', interval=2),
         logging.StreamHandler(sys.stdout)
     ],
     level="INFO")
