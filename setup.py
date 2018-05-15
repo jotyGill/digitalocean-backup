@@ -4,7 +4,7 @@ import setuptools
 
 from dobackup import __version__
 
-if sys.version_info < (3, 5):
+if sys.version_info < (3, 3):
     sys.stderr.write("ERROR: dobackup requires Python 3.5 or above." +
                      "Install using 'pip3' instead of just 'pip' \n")
     sys.exit(1)
@@ -16,7 +16,7 @@ with open('README.md', encoding='utf-8') as readme_file:
 setuptools.setup(
     name='dobackup',
     version=__version__,
-    description='Easily connect to and switch between, OpenVPN servers hosted by NordVPN.',
+    description='Automated offline snapshots of digitalocean droplets',
     license='GNU General Public License v3 or later (GPLv3+)',
     author='JGill',
     zip_safe=False,

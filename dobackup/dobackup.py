@@ -183,73 +183,83 @@ def get_token():
         sys.exit()
 
 
+def list_all_tags(manager):
+    all_tags = manager.get_all_tags()
+    log.info("All Available Tags Are : ")
+    for tag in all_tags:
+        log.info(tag.name)
+
+
 def run(init, list_all, list_snaps, list_tagged, list_tags, list_older_than,
         tag_server, untag, tag_name, delete_older_than, backup, backup_all):
-    log.info("-------------------------START-------------------------\n\n")
-    if init:
-        set_token()
+    try:
+        log.info("-------------------------START-------------------------\n\n")
+        if init:
+            set_token()
 
-    do_token = get_token()
-    manager = set_manager(do_token)
+        do_token = get_token()
+        manager = set_manager(do_token)
 
-    if list_all:
-        list_droplets(manager)
-    if list_snaps:
-        list_snapshots(manager)
-    if list_tagged:
-        tagged_droplets = get_tagged(manager, tag_name=tag_name)
-        log.info("Listing All The Tagged Droplets :")
-        log.info(tagged_droplets)
-    if list_tags:
-        # Currently broken
-        log.info("All Available Tags Are : " + str(manager.get_all_tags()))
-    if tag_server:
-        tag_droplet(do_token, tag_server, tag_name)
-        tagged_droplets = get_tagged(manager, tag_name=tag_name)
-        log.info("Now, Droplets Tagged With : " + tag_name + " Are :")
-        log.info(tagged_droplets)
-    if untag:   # broken
-        untag_droplet(do_token, tag_server, tag_name)
-        tagged_droplets = get_tagged(manager, tag_name=tag_name)
-        log.info("Now, droplets tagged with : " + tag_name + " are :")
-        log.info(tagged_droplets)
-    if delete_older_than or delete_older_than == 0:     # even accept value 0
-        log.info("Snapshots Older Than" + str(list_older_than) +
-                 " Days, With '--auto-backup--' In Their Name Are :")
-        old_backups = find_old_backups(manager, delete_older_than)
-        purge_backups(old_backups)
-        print("Delete them")
-    if list_older_than or list_older_than == 0:
-        log.info("Snapshots Older Than" + str(list_older_than) +
-                 " Days, With '--auto-backup--' In Their Name Are :")
-        find_old_backups(manager, list_older_than)
-    if backup:
-        droplet = manager.get_droplet(backup)
-        snap_action = start_backup(droplet)
-        snap_done = snap_completed(snap_action)
-        turn_it_on(droplet)
-        if not snap_done:
-            log.error("SNAPSHOT FAILED " + str(snap_action) + str(droplet))
-    if backup_all:
-        snap_and_drop_ids = []   # stores all {"snap_action": snap_action, "droplet_id": droplet}
-        tagged_droplets = get_tagged(manager, tag_name=tag_name)
+        if list_all:
+            list_droplets(manager)
+        if list_snaps:
+            list_snapshots(manager)
+        if list_tagged:
+            tagged_droplets = get_tagged(manager, tag_name=tag_name)
+            log.info("Listing All The Tagged Droplets, with the tag of : " + tag_name)
+            log.info(tagged_droplets)
+        if list_tags:
+            list_all_tags(manager)
+        if tag_server:
+            tag_droplet(do_token, tag_server, tag_name)
+            tagged_droplets = get_tagged(manager, tag_name=tag_name)
+            log.info("Now, Droplets Tagged With : " + tag_name + " Are :")
+            log.info(tagged_droplets)
+        if untag:   # broken
+            untag_droplet(do_token, tag_server, tag_name)
+            tagged_droplets = get_tagged(manager, tag_name=tag_name)
+            log.info("Now, droplets tagged with : " + tag_name + " are :")
+            log.info(tagged_droplets)
+        if delete_older_than or delete_older_than == 0:     # even accept value 0
+            log.info("Snapshots Older Than" + str(list_older_than) +
+                     " Days, With '--auto-backup--' In Their Name Are :")
+            old_backups = find_old_backups(manager, delete_older_than)
+            purge_backups(old_backups)
+            print("Delete them")
+        if list_older_than or list_older_than == 0:
+            log.info("Snapshots Older Than" + str(list_older_than) +
+                     " Days, With '--auto-backup--' In Their Name Are :")
+            find_old_backups(manager, list_older_than)
+        if backup:
+            droplet = manager.get_droplet(backup)
+            snap_action = start_backup(droplet)
+            snap_done = snap_completed(snap_action)
+            turn_it_on(droplet)
+            if not snap_done:
+                log.error("SNAPSHOT FAILED " + str(snap_action) + str(droplet))
+        if backup_all:
+            # stores all {"snap_action": snap_action, "droplet_id": droplet}
+            snap_and_drop_ids = []
+            tagged_droplets = get_tagged(manager, tag_name=tag_name)
 
-        if tagged_droplets:  # doplets found with the --tag-name
-            for drop in tagged_droplets:
-                droplet = manager.get_droplet(drop.id)
-                snap_action = start_backup(droplet)
-                snap_and_drop_ids.append({"snap_action": snap_action, "droplet_id": droplet.id})
-            log.info("Backups Started, snap_and_drop_ids:" + str(snap_and_drop_ids))
-            for snap_id_pair in snap_and_drop_ids:
-                snap_done = snap_completed(snap_id_pair["snap_action"])
-                # print("snap_action and droplet_id", snap_id_pair)
-                turn_it_on(manager.get_droplet(snap_id_pair["droplet_id"]))
-                if not snap_done:
-                    log.error("SNAPSHOT FAILED " + str(snap_action) + str(droplet))
-        else:  # no doplets with the --tag-name
-            log.warning("NO DROPLET FOUND WITH THE TAG NAME")
-    log.info("---------------------------END----------------------------")
-    log.info("\n\n")
+            if tagged_droplets:  # doplets found with the --tag-name
+                for drop in tagged_droplets:
+                    droplet = manager.get_droplet(drop.id)
+                    snap_action = start_backup(droplet)
+                    snap_and_drop_ids.append({"snap_action": snap_action, "droplet_id": droplet.id})
+                log.info("Backups Started, snap_and_drop_ids:" + str(snap_and_drop_ids))
+                for snap_id_pair in snap_and_drop_ids:
+                    snap_done = snap_completed(snap_id_pair["snap_action"])
+                    # print("snap_action and droplet_id", snap_id_pair)
+                    turn_it_on(manager.get_droplet(snap_id_pair["droplet_id"]))
+                    if not snap_done:
+                        log.error("SNAPSHOT FAILED " + str(snap_action) + str(droplet))
+            else:  # no doplets with the --tag-name
+                log.warning("NO DROPLET FOUND WITH THE TAG NAME")
+        log.info("---------------------------END----------------------------")
+        log.info("\n\n")
+    except Exception as e:
+        log.critical(e, exc_info=1)     # if errored at any time, mark CRITICAL and log traceback
 
 
 if __name__ == '__main__':
