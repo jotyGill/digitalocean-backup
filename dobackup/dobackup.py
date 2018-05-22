@@ -77,13 +77,28 @@ def set_token():
         sys.exit()
 
 
+def turn_it_off(droplet):
+    log.info("Shutting Down : " + str(droplet))
+    shut_action = droplet.get_action(droplet.shutdown()["action"]["id"])
+    shut_outcome = shut_action.wait(update_every_seconds=3)
+    if shut_outcome:
+        log.info("Shutdown Completed " + str(droplet) + " Taking Snapshot")
+    else:
+        log.error("SHUTDOWN FAILED" + str(droplet) + str(shut_action))
+
+
 def start_backup(droplet):
     snap_name = droplet.name + "--auto-backup--" + \
         str(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
     # snap_name = droplet.name + "--auto-backup--2018-05-02 12:37:52"
-    log.info("Powering Off : " + str(droplet))
-    snap = (droplet.take_snapshot(snap_name, power_off=True))
-    log.info("Powered Off " + str(droplet) + " Taking Snapshot")
+    if droplet.status == "active":
+        turn_it_off(droplet)
+    elif droplet.status == "off":
+        log.info("The Droplet Is Already Off : " + str(droplet) + " Taking Snapshot")
+    else:
+        log.error("'droplet.status' SHOULD BE EITHER 'off' OR 'active'")
+    # power_off is hard power off dont want that
+    snap = (droplet.take_snapshot(snap_name, power_off=False))
     snap_action = droplet.get_action(snap["action"]["id"])
     return snap_action
 
@@ -150,9 +165,9 @@ def untag_droplet(do_token, droplet_id, tag_name):      # Currely broken
 
 def list_droplets(manager):
     my_droplets = manager.get_all_droplets()
-    log.info("Listing All Droplets:  <droplet-id>   <droplet-name>\n")
+    log.info("Listing All Droplets:  <droplet-id>   <droplet-name>   <droplet-status>\n")
     for droplet in my_droplets:
-        log.info(droplet)
+        log.info(str(droplet) + "       " + droplet.status)
 
 
 def get_tagged(manager, tag_name):
@@ -231,9 +246,11 @@ def run(init, list_drops, list_snaps, list_tagged, list_tags, list_older_than,
             find_old_backups(manager, list_older_than)
         if backup:
             droplet = manager.get_droplet(backup)
+            original_status = droplet.status    # active or off
             snap_action = start_backup(droplet)
             snap_done = snap_completed(snap_action)
-            turn_it_on(droplet)
+            if original_status != "off":
+                turn_it_on(droplet)
             if not snap_done:
                 log.error("SNAPSHOT FAILED " + str(snap_action) + str(droplet))
         if backup_all:
