@@ -8,7 +8,6 @@ import logging.handlers
 import sys
 
 import digitalocean
-
 from dobackup import __basefilepath__, __version__
 
 logging.basicConfig(
@@ -82,7 +81,11 @@ def turn_it_off(droplet):
     shut_action = droplet.get_action(droplet.shutdown()["action"]["id"])
     shut_outcome = shut_action.wait(update_every_seconds=3)
     if shut_outcome:
-        log.info("Shutdown Completed " + str(droplet) + " Taking Snapshot")
+        droplet.load()  # refresh data
+        if droplet.status == "off":
+            log.info("Shutdown Completed " + str(droplet) + " Taking Snapshot")
+        else:
+            log.error("SHUTDOWN FAILED, REPORTED 'shut_outcome'=='True' " + str(droplet) + str(shut_action))
     else:
         log.error("SHUTDOWN FAILED" + str(droplet) + str(shut_action))
 
@@ -109,14 +112,18 @@ def snap_completed(snap_action):
         log.info(str(snap_action) + " Snapshot Completed")
         return True
     else:
-        log.error("SNAPSHOT FAILED" + str(snap_action))
+        log.error("SNAPSHOT FAILED " + str(snap_action))
         return False
 
 
 def turn_it_on(droplet):
     powered_up = droplet.power_on()
     if powered_up:
-        log.info("Powered Back Up " + str(droplet))
+        droplet.load()
+        if droplet.status == "active":
+            log.info("Powered Back Up " + str(droplet))
+        else:
+            log.critical("DID NOT POWER UP BUT REPORTED 'powered_up'=='True' " + str(droplet))
     else:
         log.critical("DID NOT POWER UP " + str(droplet))
 
@@ -165,9 +172,11 @@ def untag_droplet(do_token, droplet_id, tag_name):      # Currely broken
 
 def list_droplets(manager):
     my_droplets = manager.get_all_droplets()
-    log.info("Listing All Droplets:  <droplet-id>   <droplet-name>   <droplet-status>\n")
+    log.info("Listing All Droplets:  ")
+    log.info("<droplet-id>   <droplet-name>   <droplet-status>      <ip-addr>       <memory>\n")
     for droplet in my_droplets:
-        log.info(str(droplet) + "       " + droplet.status)
+        log.info(str(droplet).ljust(40) + droplet.status.ljust(12) +
+                 droplet.ip_address.ljust(22) + str(droplet.memory))
 
 
 def get_tagged(manager, tag_name):
