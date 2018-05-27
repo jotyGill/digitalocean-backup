@@ -34,14 +34,17 @@ optional arguments:
   --list-older-than LIST_OLDER_THAN
                         List snaps older than, in days
   --tag-server TAG_SERVER
-                        Add tag to the provided droplet id
-  --untag UNTAG         Remove tag from the provided droplet id
+                        Add tag to the provided droplet name or id
+  --untag-server UNTAG_SERVER
+                        Remove tag from the provided droplet name or id
   --tag-name TAG_NAME   To be used with "--list-tags", "--tag-server" and "--
                         backup-all", default value is "auto-backup"
   --delete-older-than DELETE_OLDER_THAN
                         Delete backups older than, in days
-  --backup BACKUP       Shutdown, Backup, Then Restart the given droplet using
-                        id
+  --backup BACKUP       Shutdown, Backup, Then Restart the droplet with given
+                        name or id
   --backup-all          Shutdown, Backup, Then Restart all droplets with "--
                         tag-name"
+  --shutdown SHUTDOWN   Shutdown, the droplet with given name or id
+  --powerup POWERUP     Powerup, the droplet with given name or id
 ```
