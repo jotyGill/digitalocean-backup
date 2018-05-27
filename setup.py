@@ -1,7 +1,6 @@
 import sys
 
 import setuptools
-
 from dobackup import __version__
 
 if sys.version_info < (3, 3):
@@ -33,6 +32,7 @@ setuptools.setup(
             'dobackup = dobackup.dobackup:main']},
     include_package_data=False,
     long_description=full_description,
+    long_description_content_type='text/markdown',
     classifiers=[
         'Intended Audience :: End Users/Desktop',
         'Intended Audience :: System Administrators',
