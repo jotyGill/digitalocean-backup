@@ -40,28 +40,28 @@ def main():
     parser.add_argument('--list-older-than', dest='list_older_than', type=int,
                         help='List snaps older than, in days')
     parser.add_argument('--tag-server', dest='tag_server', type=str,
-                        help='Add tag to the provided droplet id')
-    parser.add_argument('--untag', dest='untag', type=str,
-                        help='Remove tag from the provided droplet id')
+                        help='Add tag to the provided droplet name or id')
+    parser.add_argument('--untag-server', dest='untag_server', type=str,
+                        help='Remove tag from the provided droplet name or id')
     parser.add_argument('--tag-name', dest='tag_name', type=str,
                         help='To be used with "--list-tags", "--tag-server" and "--backup-all",\
                          default value is "auto-backup"', default='auto-backup')
     parser.add_argument('--delete-older-than', dest='delete_older_than',
                         type=int, help='Delete backups older than, in days')
     parser.add_argument('--backup', dest='backup', type=str,
-                        help='Shutdown, Backup, Then Restart the given droplet using id')
+                        help='Shutdown, Backup, Then Restart the droplet with given name or id')
     parser.add_argument('--backup-all', dest='backup_all',
                         help='Shutdown, Backup, Then Restart all droplets with "--tag-name"',
                         action='store_true')
     parser.add_argument('--shutdown', dest='shutdown', type=str,
-                        help='Shutdown, the droplet')
+                        help='Shutdown, the droplet with given name or id')
     parser.add_argument('--powerup', dest='powerup', type=str,
-                        help='Powerup, the droplet')
+                        help='Powerup, the droplet with given name or id')
 
     args = parser.parse_args()
 
     run(args.init, args.list_drops, args.list_snaps, args.list_tagged,
-        args.list_tags, args.list_older_than, args.tag_server, args.untag,
+        args.list_tags, args.list_older_than, args.tag_server, args.untag_server,
         args.tag_name, args.delete_older_than, args.backup, args.backup_all,
         args.shutdown, args.powerup)
 
@@ -232,8 +232,22 @@ def list_all_tags(manager):
         log.info(tag.name)
 
 
+def find_droplet(droplet_str, manager):
+    all_droplets = manager.get_all_droplets()
+    for drop in all_droplets:
+        log.debug(str(type(drop)) + str(drop))
+        if drop.name == droplet_str:
+            log.debug("Found droplet with name == " + droplet_str)
+            return drop
+        if str(drop.id) == droplet_str:
+            log.debug("Found droplet with id == " + droplet_str)
+            return drop
+    log.error("NO DROPLET FOUND WITH THE GIVEN NAME OR ID")
+    sys.exit()
+
+
 def run(init, list_drops, list_snaps, list_tagged, list_tags, list_older_than,
-        tag_server, untag, tag_name, delete_older_than, backup, backup_all,
+        tag_server, untag_server, tag_name, delete_older_than, backup, backup_all,
         shutdown, powerup):
     try:
         log.info("-------------------------START-------------------------\n\n")
@@ -254,12 +268,14 @@ def run(init, list_drops, list_snaps, list_tagged, list_tags, list_older_than,
         if list_tags:
             list_all_tags(manager)
         if tag_server:
-            tag_droplet(do_token, tag_server, tag_name)
+            droplet = find_droplet(tag_server, manager)
+            tag_droplet(do_token, str(droplet.id), tag_name)
             tagged_droplets = get_tagged(manager, tag_name=tag_name)
             log.info("Now, Droplets Tagged With : " + tag_name + " Are :")
             log.info(tagged_droplets)
-        if untag:   # broken
-            untag_droplet(do_token, tag_server, tag_name)
+        if untag_server:   # broken
+            droplet = find_droplet(untag_server, manager)
+            untag_droplet(do_token, str(droplet.id), tag_name)
             tagged_droplets = get_tagged(manager, tag_name=tag_name)
             log.info("Now, droplets tagged with : " + tag_name + " are :")
             log.info(tagged_droplets)
@@ -273,7 +289,7 @@ def run(init, list_drops, list_snaps, list_tagged, list_tags, list_older_than,
                      " Days, With '--auto-backup--' In Their Name Are :")
             find_old_backups(manager, list_older_than)
         if backup:
-            droplet = manager.get_droplet(backup)
+            droplet = find_droplet(backup, manager)
             original_status = droplet.status    # active or off
             snap_action = start_backup(droplet)
             snap_done = snap_completed(snap_action)
@@ -301,10 +317,10 @@ def run(init, list_drops, list_snaps, list_tagged, list_tags, list_older_than,
             else:  # no doplets with the --tag-name
                 log.warning("NO DROPLET FOUND WITH THE TAG NAME")
         if shutdown:
-            droplet = manager.get_droplet(shutdown)
+            droplet = find_droplet(shutdown, manager)
             turn_it_off(droplet)
         if powerup:
-            droplet = manager.get_droplet(powerup)
+            droplet = find_droplet(powerup, manager)
             turn_it_on(droplet)
         log.info("---------------------------END----------------------------")
         log.info("\n\n")
