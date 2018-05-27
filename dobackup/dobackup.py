@@ -113,6 +113,7 @@ def start_backup(droplet):
     else:
         log.error("'droplet.status' SHOULD BE EITHER 'off' OR 'active'")
     # power_off is hard power off dont want that
+    log.info("Taking snapshot of " + droplet.name)
     snap = (droplet.take_snapshot(snap_name, power_off=False))
     snap_action = droplet.get_action(snap["action"]["id"])
     return snap_action
