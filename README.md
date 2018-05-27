@@ -8,7 +8,7 @@ Install as a user without sudo. This installs it in ~/.local/bin/ make sure this
 python3 -m pip install --user dobackup
 ```
 If not found, add the following to your .bashrc or .zshrc
-```
+``` bash
 # Add to PATH to Install and run programs with "pip install --user"
 export PATH=$PATH:~/.local/bin
 ```

@@ -315,7 +315,7 @@ def run(init, list_drops, list_snaps, list_tagged, list_tags, list_older_than,
                     if not snap_done:
                         log.error("SNAPSHOT FAILED " + str(snap_action) + str(droplet))
             else:  # no doplets with the --tag-name
-                log.warning("NO DROPLET FOUND WITH THE TAG NAME")
+                log.warning("NO DROPLET FOUND WITH THE TAG NAME " + tag_name)
         if shutdown:
             droplet = find_droplet(shutdown, manager)
             turn_it_off(droplet)
