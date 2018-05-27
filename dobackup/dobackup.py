@@ -6,6 +6,7 @@ import json
 import logging
 import logging.handlers
 import sys
+import time
 
 import digitalocean
 from dobackup import __basefilepath__, __version__
@@ -52,12 +53,17 @@ def main():
     parser.add_argument('--backup-all', dest='backup_all',
                         help='Shutdown, Backup, Then Restart all droplets with "--tag-name"',
                         action='store_true')
+    parser.add_argument('--shutdown', dest='shutdown', type=str,
+                        help='Shutdown, the droplet')
+    parser.add_argument('--powerup', dest='powerup', type=str,
+                        help='Powerup, the droplet')
 
     args = parser.parse_args()
 
     run(args.init, args.list_drops, args.list_snaps, args.list_tagged,
         args.list_tags, args.list_older_than, args.tag_server, args.untag,
-        args.tag_name, args.delete_older_than, args.backup, args.backup_all)
+        args.tag_name, args.delete_older_than, args.backup, args.backup_all,
+        args.shutdown, args.powerup)
 
 
 def set_token():
@@ -79,15 +85,21 @@ def set_token():
 def turn_it_off(droplet):
     log.info("Shutting Down : " + str(droplet))
     shut_action = droplet.get_action(droplet.shutdown()["action"]["id"])
+    log.debug("shut_action " + str(shut_action) + str(type(shut_action)))
     shut_outcome = shut_action.wait(update_every_seconds=3)
+    log.debug("shut_outcome " + str(shut_outcome))
     if shut_outcome:
-        droplet.load()  # refresh data
-        if droplet.status == "off":
-            log.info("Shutdown Completed " + str(droplet) + " Taking Snapshot")
-        else:
-            log.error("SHUTDOWN FAILED, REPORTED 'shut_outcome'=='True' " + str(droplet) + str(shut_action))
+        for i in range(50):
+            time.sleep(3)
+            droplet.load()  # refresh droplet data
+            log.debug("droplet.status " + droplet.status + " i " + str(i))
+            if droplet.status == "off":
+                log.info("Shutdown Completed " + str(droplet))
+                return
+        log.error("SHUTDOWN FAILED, REPORTED 'shut_outcome'=='True' " +
+                  str(droplet) + str(shut_action))
     else:
-        log.error("SHUTDOWN FAILED" + str(droplet) + str(shut_action))
+        log.error("SHUTDOWN FAILED " + str(droplet) + str(shut_action))
 
 
 def start_backup(droplet):
@@ -117,13 +129,19 @@ def snap_completed(snap_action):
 
 
 def turn_it_on(droplet):
-    powered_up = droplet.power_on()
-    if powered_up:
-        droplet.load()
-        if droplet.status == "active":
-            log.info("Powered Back Up " + str(droplet))
-        else:
-            log.critical("DID NOT POWER UP BUT REPORTED 'powered_up'=='True' " + str(droplet))
+    power_up_action = droplet.get_action(droplet.power_on()["action"]["id"])
+    log.debug("power_up_action " + str(power_up_action) + str(type(power_up_action)))
+    power_up_outcome = power_up_action.wait(update_every_seconds=3)
+    log.debug("power_up_outcome " + str(power_up_outcome))
+    if power_up_outcome:
+        for i in range(5):
+            time.sleep(2)
+            droplet.load()  # refresh droplet data
+            log.debug("droplet.status " + droplet.status)
+            if droplet.status == "active":
+                log.info("Powered Back Up " + str(droplet))
+                return
+        log.critical("DID NOT POWER UP BUT REPORTED 'powered_up'=='True' " + str(droplet))
     else:
         log.critical("DID NOT POWER UP " + str(droplet))
 
@@ -215,7 +233,8 @@ def list_all_tags(manager):
 
 
 def run(init, list_drops, list_snaps, list_tagged, list_tags, list_older_than,
-        tag_server, untag, tag_name, delete_older_than, backup, backup_all):
+        tag_server, untag, tag_name, delete_older_than, backup, backup_all,
+        shutdown, powerup):
     try:
         log.info("-------------------------START-------------------------\n\n")
         if init:
@@ -281,6 +300,12 @@ def run(init, list_drops, list_snaps, list_tagged, list_tags, list_older_than,
                         log.error("SNAPSHOT FAILED " + str(snap_action) + str(droplet))
             else:  # no doplets with the --tag-name
                 log.warning("NO DROPLET FOUND WITH THE TAG NAME")
+        if shutdown:
+            droplet = manager.get_droplet(shutdown)
+            turn_it_off(droplet)
+        if powerup:
+            droplet = manager.get_droplet(powerup)
+            turn_it_on(droplet)
         log.info("---------------------------END----------------------------")
         log.info("\n\n")
     except Exception as e:

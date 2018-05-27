@@ -14,6 +14,7 @@ export PATH=$PATH:~/.local/bin
 ```
 
 ## Usage
+``` bash
 usage: dobackup [-h] [-v] [--init] [--list-drops] [--list-snaps]
                 [--list-tagged] [--list-tags]
                 [--list-older-than LIST_OLDER_THAN] [--tag-server TAG_SERVER]
@@ -24,7 +25,7 @@ usage: dobackup [-h] [-v] [--init] [--list-drops] [--list-snaps]
 
 optional arguments:
   -h, --help            show this help message and exit
-  -v, --version         show program's version number and exit
+  -v, --version         show programs version number and exit
   --init                Save token to .token file
   --list-drops          List all droplets
   --list-snaps          List all snapshots
@@ -43,3 +44,4 @@ optional arguments:
                         id
   --backup-all          Shutdown, Backup, Then Restart all droplets with "--
                         tag-name"
+```
