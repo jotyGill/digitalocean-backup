@@ -45,7 +45,7 @@ def main():
                         help='Remove tag from the provided droplet name or id')
     parser.add_argument('--tag-name', dest='tag_name', type=str,
                         help='To be used with "--list-tags", "--tag-server" and "--backup-all",\
-                         default value is "auto-backup"', default='auto-backup')
+                         default value is "dobackup"', default='dobackup')
     parser.add_argument('--delete-older-than', dest='delete_older_than',
                         type=int, help='Delete backups older than, in days')
     parser.add_argument('--backup', dest='backup', type=str,
@@ -103,9 +103,9 @@ def turn_it_off(droplet):
 
 
 def start_backup(droplet):
-    snap_name = droplet.name + "--auto-backup--" + \
+    snap_name = droplet.name + "--dobackup--" + \
         str(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
-    # snap_name = droplet.name + "--auto-backup--2018-05-02 12:37:52"
+    # snap_name = droplet.name + "--dobackup--2018-05-02 12:37:52"
     if droplet.status == "active":
         turn_it_off(droplet)
     elif droplet.status == "off":
@@ -153,8 +153,8 @@ def find_old_backups(manager, older_than):
 
     for each_snapshot in manager.get_droplet_snapshots():
         # print(each_snapshot.name, each_snapshot.created_at, each_snapshot.id)
-        if "--auto-backup--" in each_snapshot.name:
-            backed_on = each_snapshot.name[each_snapshot.name.find("--auto-backup--") + 15:]
+        if "--dobackup--" in each_snapshot.name:
+            backed_on = each_snapshot.name[each_snapshot.name.find("--dobackup--") + 15:]
             # print("backed_on", backed_on)
             backed_on_date = datetime.datetime.strptime(backed_on, "%Y-%m-%d %H:%M:%S")
             if backed_on_date < last_backup_to_keep:
@@ -282,12 +282,12 @@ def run(init, list_drops, list_snaps, list_tagged, list_tags, list_older_than,
             log.info(tagged_droplets)
         if delete_older_than or delete_older_than == 0:     # even accept value 0
             log.info("Snapshots Older Than " + str(delete_older_than) +
-                     " Days, With '--auto-backup--' In Their Name Are :")
+                     " Days, With '--dobackup--' In Their Name Are :")
             old_backups = find_old_backups(manager, delete_older_than)
             purge_backups(old_backups)
         if list_older_than or list_older_than == 0:
             log.info("Snapshots Older Than " + str(list_older_than) +
-                     " Days, With '--auto-backup--' In Their Name Are :")
+                     " Days, With '--dobackup--' In Their Name Are :")
             find_old_backups(manager, list_older_than)
         if backup:
             droplet = find_droplet(backup, manager)
