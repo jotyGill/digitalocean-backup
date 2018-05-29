@@ -30,6 +30,9 @@ def main():
                         help='Save token to .token file', action='store_true')
     parser.add_argument('--list-drops', dest='list_drops',
                         help='List all droplets', action='store_true')
+    parser.add_argument('--list-backups', dest='list_backups',
+                        help='List all snapshots with "dobackup" in their name',
+                        action='store_true')
     parser.add_argument('--list-snaps', dest='list_snaps',
                         help='List all snapshots', action='store_true')
     parser.add_argument('--list-tagged', dest='list_tagged',
@@ -60,7 +63,7 @@ def main():
 
     args = parser.parse_args()
 
-    run(args.init, args.list_drops, args.list_snaps, args.list_tagged,
+    run(args.init, args.list_drops, args.list_backups, args.list_snaps, args.list_tagged,
         args.list_tags, args.list_older_than, args.tag_server, args.untag_server,
         args.tag_name, args.delete_older_than, args.backup, args.backup_all,
         args.shutdown, args.powerup)
@@ -204,10 +207,14 @@ def get_tagged(manager, tag_name):
 
 
 def list_snapshots(manager):
-    all_snaps = manager.get_all_snapshots()
-    log.info("All Available Snapshots Are : <snapshot-id>   <snapshot-name>\n")
-    for snap in all_snaps:
-        log.info(snap)
+    log.info("All Available Snapshots Are : <snapshot-name>   <snapshot-id>\n")
+    snapshots = []
+    for snap in manager.get_all_snapshots():
+        snapshots.append([snap.name, snap.id])
+
+    snapshots.sort()
+    for snap in snapshots:
+        log.info(snap[0].ljust(70) + snap[1])
 
 
 def set_manager(do_token):
@@ -247,9 +254,21 @@ def find_droplet(droplet_str, manager):
     sys.exit()
 
 
-def run(init, list_drops, list_snaps, list_tagged, list_tags, list_older_than,
-        tag_server, untag_server, tag_name, delete_older_than, backup, backup_all,
-        shutdown, powerup):
+def list_taken_backups(manager):
+    log.info("The Backups Taken With dobackup Are : <snapshot-name>     <snapshot-id>\n")
+    backups = []
+    for snap in manager.get_all_snapshots():
+        if "--auto-backup--" in snap.name:
+            backups.append([snap.name, snap.id])
+
+    backups.sort()
+    for snap in backups:
+        log.info(snap[0].ljust(70) + snap[1])
+
+
+def run(init, list_drops, list_backups, list_snaps, list_tagged, list_tags,
+        list_older_than, tag_server, untag_server, tag_name, delete_older_than,
+        backup, backup_all, shutdown, powerup):
     try:
         log.info("-------------------------START-------------------------\n\n")
         if init:
@@ -260,6 +279,8 @@ def run(init, list_drops, list_snaps, list_tagged, list_tags, list_older_than,
 
         if list_drops:
             list_droplets(manager)
+        if list_backups:
+            list_taken_backups(manager)
         if list_snaps:
             list_snapshots(manager)
         if list_tagged:

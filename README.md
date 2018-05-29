@@ -28,6 +28,7 @@ optional arguments:
   -v, --version         show programs version number and exit
   --init                Save token to .token file
   --list-drops          List all droplets
+  --list-backups        List all snapshots with "dobackup" in their name
   --list-snaps          List all snapshots
   --list-tagged         List droplets using "--tag-name"
   --list-tags           List all used tags
@@ -38,7 +39,7 @@ optional arguments:
   --untag-server UNTAG_SERVER
                         Remove tag from the provided droplet name or id
   --tag-name TAG_NAME   To be used with "--list-tags", "--tag-server" and "--
-                        backup-all", default value is "auto-backup"
+                        backup-all", default value is "dobackup"
   --delete-older-than DELETE_OLDER_THAN
                         Delete backups older than, in days
   --backup BACKUP       Shutdown, Backup, Then Restart the droplet with given
