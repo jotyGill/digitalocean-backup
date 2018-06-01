@@ -62,8 +62,8 @@ def main():
                         help='Powerup, the droplet with given name or id')
     parser.add_argument('--restore-drop', dest='restore_drop', type=str,
                         help='Restore, the droplet with given name or id')
-    parser.add_argument('--restore-to', dest='restore_to', type=int,
-                        help='Snapshot id, to restore the droplet to')
+    parser.add_argument('--restore-to', dest='restore_to',
+                        help='Snapshot id or name, to restore the droplet to')
 
     args = parser.parse_args()
 
@@ -258,18 +258,34 @@ def find_droplet(droplet_str, manager):
     sys.exit()
 
 
-# def find_snapshot(snap_id_or_name, manager, do_token):
-    # snap_ids = []
-    # for snap in manager.get_all_snapshots():
-    # snapshots.append(snap.id)
-    # if snap_id_or_name in snap_ids:
+def find_snapshot(snap_id_or_name, manager, do_token, droplet_id=000000):
+    snap_id_or_name = str(snap_id_or_name)  # for comparisions
+    for snap in manager.get_all_snapshots():
+        # print(type(snap.resource_id), type(droplet_id))
+        if droplet_id == 000000:        # meaning, doesn't matter
+            if snap_id_or_name == str(snap.id) or snap_id_or_name == snap.name:
+                snap_obj = digitalocean.Snapshot.get_object(do_token, snap.id)
+                log.info("snap id and name " + str(snap.id) + str(snap.name))
+                return snap_obj
+        # to filter snapshots for a specific droplet
+        elif droplet_id == int(snap.resource_id):
+            log.info("snap id and name " + str(snap.id) + str(snap.name))
+            if snap_id_or_name == str(snap.id) or snap_id_or_name == snap.name:
+                snap_obj = digitalocean.Snapshot.get_object(do_token, snap.id)
+                return snap_obj
+    if droplet_id == 000000:
+        log.error("NO SNAPSHOT FOUND WITH NAME OR ID OF " + str(snap_id_or_name))
+    else:
+        log.error("NO SNAPSHOT FOUND WITH NAME OR ID OF " +
+                  str(snap_id_or_name) + " FOR DROPLET ID " + str(droplet_id))
+    return None
 
 
 def list_taken_backups(manager):
     log.info("The Backups Taken With dobackup Are : <snapshot-name>     <snapshot-id>\n")
     backups = []
     for snap in manager.get_all_snapshots():
-        if "--auto-backup--" in snap.name:
+        if "--dobackup--" in snap.name:
             backups.append([snap.name, snap.id])
 
     backups.sort()
@@ -277,26 +293,15 @@ def list_taken_backups(manager):
         log.info(snap[0].ljust(70) + snap[1])
 
 
-def restore_droplet(droplet, snapshot, do_token):
-    snap_list = droplet.get_snapshots()
-    snap_ids_list = []
-    print(snap_list, type(snap_list))
-    if not snap_list:
-        log.info("No Snapshot Found")
-        sys.exit()
-    for snap in snap_list:
-        snap_ids_list.append(snap.id)
-        log.info(snap)
-        # snap = digitalocean.Snapshot.get_object(id)
-        log.info(str(snap.name) + str(type(snap.id)))
-    if snapshot in snap_ids_list:
-        snap_obj = digitalocean.Snapshot.get_object(do_token, snapshot)
-        log.info(str(snap_obj) + " Is A Valid Snapshot For " + droplet.name + "\n")
+def restore_droplet(droplet, snapshot, manager, do_token):
+    snap = find_snapshot(snapshot, manager, do_token, droplet_id=droplet.id)
+
+    if snap:
+        log.info(str(snap) + " Is A Valid Snapshot For " + droplet.name + "\n")
         confirmation = input("Are You Sure You Want To Restore ? (if so, type 'yes') ")
         if confirmation.lower() == "yes":
             log.info("Restoring")
-
-    else:
+    if not snap:
         log.error(str(snapshot) + " IS NOT A VALID SNAPSHOT FOR " + droplet.name)
 
 
@@ -383,7 +388,7 @@ def run(init, list_drops, list_backups, list_snaps, list_tagged, list_tags,
         if restore_drop:
             if restore_to:
                 droplet = find_droplet(restore_drop, manager)
-                restore_droplet(droplet, restore_to, do_token)
+                restore_droplet(droplet, restore_to, manager, do_token)
             else:
                 log.warning("Please Use '--restore-to' To Provide The id Of \
 Snapshot To Restore This Droplet To")
