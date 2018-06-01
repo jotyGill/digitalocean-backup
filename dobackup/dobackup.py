@@ -258,6 +258,7 @@ def find_droplet(droplet_str, manager):
     sys.exit()
 
 
+# Note: Snapshot.resource_id and Snapshot.id are str not int
 def find_snapshot(snap_id_or_name, manager, do_token, droplet_id=000000):
     snap_id_or_name = str(snap_id_or_name)  # for comparisions
     for snap in manager.get_all_snapshots():
@@ -300,7 +301,15 @@ def restore_droplet(droplet, snapshot, manager, do_token):
         log.info(str(snap) + " Is A Valid Snapshot For " + droplet.name + "\n")
         confirmation = input("Are You Sure You Want To Restore ? (if so, type 'yes') ")
         if confirmation.lower() == "yes":
-            log.info("Restoring")
+            log.info("Starting Restore Process")
+            restore_act = droplet.get_action(droplet.restore(
+                int(snap.id))["action"]["id"])  # return action
+            restore_outcome = restore_act.wait(update_every_seconds=3)
+            if restore_outcome:
+                log.info(str(restore_act) + " Restore Completed")
+            else:
+                log.error("RESTORE FAILED " + str(restore_act))
+
     if not snap:
         log.error(str(snapshot) + " IS NOT A VALID SNAPSHOT FOR " + droplet.name)
 
