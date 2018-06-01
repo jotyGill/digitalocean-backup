@@ -60,13 +60,17 @@ def main():
                         help='Shutdown, the droplet with given name or id')
     parser.add_argument('--powerup', dest='powerup', type=str,
                         help='Powerup, the droplet with given name or id')
+    parser.add_argument('--restore-drop', dest='restore_drop', type=str,
+                        help='Restore, the droplet with given name or id')
+    parser.add_argument('--restore-to', dest='restore_to', type=int,
+                        help='Snapshot id, to restore the droplet to')
 
     args = parser.parse_args()
 
     run(args.init, args.list_drops, args.list_backups, args.list_snaps, args.list_tagged,
         args.list_tags, args.list_older_than, args.tag_server, args.untag_server,
         args.tag_name, args.delete_older_than, args.backup, args.backup_all,
-        args.shutdown, args.powerup)
+        args.shutdown, args.powerup, args.restore_drop, args.restore_to)
 
 
 def set_token():
@@ -254,6 +258,13 @@ def find_droplet(droplet_str, manager):
     sys.exit()
 
 
+# def find_snapshot(snap_id_or_name, manager, do_token):
+    # snap_ids = []
+    # for snap in manager.get_all_snapshots():
+    # snapshots.append(snap.id)
+    # if snap_id_or_name in snap_ids:
+
+
 def list_taken_backups(manager):
     log.info("The Backups Taken With dobackup Are : <snapshot-name>     <snapshot-id>\n")
     backups = []
@@ -266,9 +277,32 @@ def list_taken_backups(manager):
         log.info(snap[0].ljust(70) + snap[1])
 
 
+def restore_droplet(droplet, snapshot, do_token):
+    snap_list = droplet.get_snapshots()
+    snap_ids_list = []
+    print(snap_list, type(snap_list))
+    if not snap_list:
+        log.info("No Snapshot Found")
+        sys.exit()
+    for snap in snap_list:
+        snap_ids_list.append(snap.id)
+        log.info(snap)
+        # snap = digitalocean.Snapshot.get_object(id)
+        log.info(str(snap.name) + str(type(snap.id)))
+    if snapshot in snap_ids_list:
+        snap_obj = digitalocean.Snapshot.get_object(do_token, snapshot)
+        log.info(str(snap_obj) + " Is A Valid Snapshot For " + droplet.name + "\n")
+        confirmation = input("Are You Sure You Want To Restore ? (if so, type 'yes') ")
+        if confirmation.lower() == "yes":
+            log.info("Restoring")
+
+    else:
+        log.error(str(snapshot) + " IS NOT A VALID SNAPSHOT FOR " + droplet.name)
+
+
 def run(init, list_drops, list_backups, list_snaps, list_tagged, list_tags,
         list_older_than, tag_server, untag_server, tag_name, delete_older_than,
-        backup, backup_all, shutdown, powerup):
+        backup, backup_all, shutdown, powerup, restore_drop, restore_to):
     try:
         log.info("-------------------------START-------------------------\n\n")
         if init:
@@ -346,6 +380,14 @@ def run(init, list_drops, list_backups, list_snaps, list_tagged, list_tags,
             turn_it_on(droplet)
         log.info("---------------------------END----------------------------")
         log.info("\n\n")
+        if restore_drop:
+            if restore_to:
+                droplet = find_droplet(restore_drop, manager)
+                restore_droplet(droplet, restore_to, do_token)
+            else:
+                log.warning("Please Use '--restore-to' To Provide The id Of \
+Snapshot To Restore This Droplet To")
+
     except Exception as e:
         log.critical(e, exc_info=1)     # if errored at any time, mark CRITICAL and log traceback
 
