@@ -1,5 +1,5 @@
-.token
-token
+.token*
+token*
 test*
 *.log
 *.log*
