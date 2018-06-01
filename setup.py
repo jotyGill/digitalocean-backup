@@ -30,7 +30,7 @@ setuptools.setup(
     entry_points={
         'console_scripts': [
             'dobackup = dobackup.dobackup:main']},
-    include_package_data=False,
+    include_package_data=True,
     long_description=full_description,
     long_description_content_type='text/markdown',
     classifiers=[

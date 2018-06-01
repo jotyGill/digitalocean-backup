@@ -89,6 +89,17 @@ def set_token():
         sys.exit()
 
 
+def install_zsh_completion():
+    import os.path
+    import shutil
+    if os.path.exists(os.path.join(os.path.expanduser("~"), ".oh-my-zsh/custom/plugins/zsh-completions/src/")):
+        log.info("Zsh-completions path exists, installing completions file '_dobackup'")
+        shutil.copy(__basefilepath__ + "_dobackup",
+                    os.path.join(os.path.expanduser("~"), ".oh-my-zsh/custom/plugins/zsh-completions/src/"))
+    else:
+        log.info("Zsh-completions with oh-my-zsh is not installed, can't use auto completions, but that's ok")
+
+
 def turn_it_off(droplet):
     log.info("Shutting Down : " + str(droplet))
     shut_action = droplet.get_action(droplet.shutdown()["action"]["id"])
@@ -321,6 +332,7 @@ def run(init, list_drops, list_backups, list_snaps, list_tagged, list_tags,
         log.info("-------------------------START-------------------------\n\n")
         if init:
             set_token()
+            install_zsh_completion()
 
         do_token = get_token()
         manager = set_manager(do_token)
