@@ -7,7 +7,7 @@ The script is designed to be used as a cron job as well.
 ## Installation
 Install as a user without sudo. This installs it in ~/.local/bin/ make sure this path is in your $PATH.
 ``` bash
-python3 -m pip install --user dobackup
+python3 -m pip install --user dobackup --upgrade
 ```
 If not found, add the following to your .bashrc or .zshrc
 ``` bash
