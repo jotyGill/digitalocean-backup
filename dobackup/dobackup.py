@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+
 import argparse
 import datetime
 import json
@@ -8,6 +9,7 @@ import sys
 import time
 
 import digitalocean
+
 from dobackup import __basefilepath__, __version__
 
 logging.basicConfig(
@@ -50,6 +52,8 @@ def main():
                          default value is "dobackup"', default='dobackup')
     parser.add_argument('--delete-older-than', dest='delete_older_than',
                         type=int, help='Delete backups older than, in days')
+    parser.add_argument('--delete-snap', dest='delete_snap',
+                        type=str, help='Delete the snapshot with given name or id')
     parser.add_argument('--backup', dest='backup', type=str,
                         help='Shutdown, Backup, Then Restart the droplet with given name or id')
     parser.add_argument('--backup-all', dest='backup_all',
@@ -68,8 +72,8 @@ def main():
 
     run(args.init, args.list_drops, args.list_backups, args.list_snaps, args.list_tagged,
         args.list_tags, args.list_older_than, args.tag_server, args.untag_server,
-        args.tag_name, args.delete_older_than, args.backup, args.backup_all,
-        args.shutdown, args.powerup, args.restore_drop, args.restore_to)
+        args.tag_name, args.delete_older_than, args.delete_snap, args.backup,
+        args.backup_all, args.shutdown, args.powerup, args.restore_drop, args.restore_to)
 
 
 def set_token():
@@ -182,17 +186,13 @@ def find_old_backups(manager, older_than):
     return old_snapshots
 
 
-def purge_backups(old_snapshots):
-    if old_snapshots:   # list not empty
-        for each_snapshot in old_snapshots:
-            log.warning("Deleting Old Snapshot: " + str(each_snapshot))
-            destroyed = each_snapshot.destroy()
-            if destroyed:
-                log.info("Successfully Destroyed The Snapshot")
-            else:
-                log.error("COULD NOT DESTROY SNAPSHOT " + str(each_snapshot))
+def delete_snapshot(each_snapshot):
+    log.warning("Deleting Snapshot : " + str(each_snapshot))
+    destroyed = each_snapshot.destroy()
+    if destroyed:
+        log.info("Successfully Destroyed The Snapshot")
     else:
-        log.info("No Snapshot Is Old Enough To be Deleted")
+        log.error("COULD NOT DESTROY SNAPSHOT " + str(each_snapshot))
 
 
 def tag_droplet(do_token, droplet_id, tag_name):
@@ -276,20 +276,22 @@ def find_snapshot(snap_id_or_name, manager, do_token, droplet_id=000000):
         if droplet_id == 000000:        # meaning, doesn't matter
             if snap_id_or_name == str(snap.id) or snap_id_or_name == snap.name:
                 snap_obj = digitalocean.Snapshot.get_object(do_token, snap.id)
-                log.info("snap id and name " + str(snap.id) + str(snap.name))
+                log.info("snap id and name " + str(snap.id) + " " + str(snap.name))
                 return snap_obj
         # to filter snapshots for a specific droplet
         elif droplet_id == int(snap.resource_id):
-            log.info("snap id and name " + str(snap.id) + str(snap.name))
+            log.info("snap id and name " + str(snap.id) + " " + str(snap.name))
             if snap_id_or_name == str(snap.id) or snap_id_or_name == snap.name:
                 snap_obj = digitalocean.Snapshot.get_object(do_token, snap.id)
                 return snap_obj
     if droplet_id == 000000:
-        log.error("NO SNAPSHOT FOUND WITH NAME OR ID OF " + str(snap_id_or_name))
+        log.error("NO SNAPSHOT FOUND WITH NAME OR ID OF " +
+                  str(snap_id_or_name) + " EXITING")
     else:
         log.error("NO SNAPSHOT FOUND WITH NAME OR ID OF " +
-                  str(snap_id_or_name) + " FOR DROPLET ID " + str(droplet_id))
-    return None
+                  str(snap_id_or_name) + " FOR DROPLET ID " +
+                  str(droplet_id) + " EXITING")
+    sys.exit()
 
 
 def list_taken_backups(manager):
@@ -326,7 +328,8 @@ def restore_droplet(droplet, snapshot, manager, do_token):
 
 def run(init, list_drops, list_backups, list_snaps, list_tagged, list_tags,
         list_older_than, tag_server, untag_server, tag_name, delete_older_than,
-        backup, backup_all, shutdown, powerup, restore_drop, restore_to):
+        delete_snap, backup, backup_all, shutdown, powerup, restore_drop,
+        restore_to):
     try:
         log.info("-------------------------START-------------------------\n\n")
         if init:
@@ -364,7 +367,14 @@ def run(init, list_drops, list_backups, list_snaps, list_tagged, list_tags,
             log.info("Snapshots Older Than " + str(delete_older_than) +
                      " Days, With '--dobackup--' In Their Name Are :")
             old_backups = find_old_backups(manager, delete_older_than)
-            purge_backups(old_backups)
+            if old_backups:     # not an empty list
+                for abackup in old_backups:
+                    delete_snapshot(abackup)
+            else:
+                log.info("No Snapshot Is Old Enough To be Deleted")
+        if delete_snap:
+            snap = find_snapshot(delete_snap, manager, do_token)
+            delete_snapshot(snap)
         if list_older_than or list_older_than == 0:
             log.info("Snapshots Older Than " + str(list_older_than) +
                      " Days, With '--dobackup--' In Their Name Are :")
