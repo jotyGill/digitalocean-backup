@@ -68,7 +68,12 @@ dobackup --restore-drop ubuntu-18-04 --restore-to "ubuntu-18-04--dobackup--2018-
 ```
 
 ### Delete Old Backups
-To delete old backups taken with dobackup.
+To delete a specific snapshot.
+``` bash
+dobackup --delete-snap "ubuntu-1gb-sgp1-01--dobackup--2018-05-31 17:43:11"   # put snap name or id
+```
+
+To delete all old backups taken with dobackup.
 ``` bash
 dobackup --delete-older-than 14     # older than 14 days
 ```
@@ -76,12 +81,14 @@ dobackup --delete-older-than 14     # older than 14 days
 ## Options
 
 ``` bash
-usage: dobackup [-h] [-v] [--init] [--list-drops] [--list-snaps]
-                [--list-tagged] [--list-tags]
+usage: dobackup [-h] [-v] [--init] [--list-drops] [--list-backups]
+                [--list-snaps] [--list-tagged] [--list-tags]
                 [--list-older-than LIST_OLDER_THAN] [--tag-server TAG_SERVER]
-                [--untag UNTAG] [--tag-name TAG_NAME]
-                [--delete-older-than DELETE_OLDER_THAN] [--backup BACKUP]
-                [--backup-all]
+                [--untag-server UNTAG_SERVER] [--tag-name TAG_NAME]
+                [--delete-older-than DELETE_OLDER_THAN]
+                [--delete-snap DELETE_SNAP] [--backup BACKUP] [--backup-all]
+                [--shutdown SHUTDOWN] [--powerup POWERUP]
+                [--restore-drop RESTORE_DROP] [--restore-to RESTORE_TO]
 
 
 optional arguments:
@@ -103,6 +110,8 @@ optional arguments:
                         backup-all", default value is "dobackup"
   --delete-older-than DELETE_OLDER_THAN
                         Delete backups older than, in days
+  --delete-snap DELETE_SNAP
+                        Delete the snapshot with given name or id
   --backup BACKUP       Shutdown, Backup, Then Restart the droplet with given
                         name or id
   --backup-all          Shutdown, Backup, Then Restart all droplets with "--
