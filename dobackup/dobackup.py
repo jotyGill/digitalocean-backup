@@ -92,9 +92,10 @@ def set_tokens():
         tokens.append(token_str)
     if not tokens:
         sys.exit(1)
-    for i in range(len(tokens)):
-        token_dic["token" + str(i)] = tokens[i]
-
+    # for i in range(len(tokens)):
+    #     token_dic["token" + str(i)] = tokens[i]
+    for i, token in enumerate(tokens):
+        token_dic["token" + str(i)] = token
     try:
         with open(__basefilepath__ + '.token', 'w') as token_file:
             json.dump(token_dic, token_file)
