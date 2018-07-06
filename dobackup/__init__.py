@@ -1,6 +1,6 @@
 import os.path
 
-__version__ = "1.0.0"
+__version__ = "1.0.1"
 __license__ = "GNU General Public License v3 or later (GPLv3+)"
 __data_files__ = []
 
