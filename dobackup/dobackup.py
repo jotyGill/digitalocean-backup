@@ -91,9 +91,9 @@ def set_tokens():
             log.error("Is It Really A Token Though? The Length Should Be 64")
         tokens.append(token_str)
     if not tokens:
+        log.error("TOKEN LIST IS EMPTY, EXISTING")
         sys.exit(1)
-    # for i in range(len(tokens)):
-    #     token_dic["token" + str(i)] = tokens[i]
+
     for i, token in enumerate(tokens):
         token_dic["token" + str(i)] = token
     try:
@@ -102,7 +102,7 @@ def set_tokens():
         log.info("Token/s Has Been Stored In .token File")
     except FileNotFoundError:
         log.error("FileNotFoundError: SOMETHING WRONG WITH THE PATH TO '.token'")
-        sys.exit()
+        sys.exit(1)
 
 
 def install_zsh_completion():
@@ -258,10 +258,10 @@ def get_token(token_id):
         return do_token[token_key]
     except FileNotFoundError:
         log.error("FileNotFoundError: PLEASE STORE THE DO ACCESS TOKEN USING '--init'")
-        sys.exit()
+        sys.exit(1)
     except KeyError:
         log.error("KeyError: TOKEN KEY '{0}' NOT FOUND IN .token FILE".format(token_key))
-        sys.exit()
+        sys.exit(1)
 
 
 def list_all_tags(manager):
@@ -282,7 +282,7 @@ def find_droplet(droplet_str, manager):
             log.debug("Found droplet with id == {0}".format(droplet_str))
             return drop
     log.error("NO DROPLET FOUND WITH THE GIVEN NAME OR ID")
-    sys.exit()
+    sys.exit(1)
 
 
 # Note: Snapshot.resource_id and Snapshot.id are str not int
@@ -308,7 +308,7 @@ def find_snapshot(snap_id_or_name, manager, do_token, droplet_id=000000):
         log.error("NO SNAPSHOT FOUND WITH NAME OR ID OF " +
                   str(snap_id_or_name) + " FOR DROPLET ID " +
                   str(droplet_id) + " EXITING")
-    sys.exit()
+    sys.exit(1)
 
 
 def list_taken_backups(manager):
@@ -442,6 +442,7 @@ Snapshot To Restore This Droplet To")
 
     except Exception as e:
         log.critical(e, exc_info=1)     # if errored at any time, mark CRITICAL and log traceback
+        sys.exit(1)
 
 
 if __name__ == '__main__':
