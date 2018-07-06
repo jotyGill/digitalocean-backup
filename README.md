@@ -21,7 +21,16 @@ export PATH=$PATH:~/.local/bin
 Store the api access token in .token file by running '--init' and providing the token string.
 ``` bash
 dobackup --init
-# Provide the token string
+# Paste the digitalocean token string, press enter
+# If you have multiple accounts, paste each- press enter, so on
+# When done, just press enter to submit an empty string
+# The sequence of these tokens (0,1,2) will be later used to "use" the tokens
+```
+To use one of the stored tokens, specify it's index after "dobackup ",
+``` bash
+dobackup 0      # 0 is implicit
+dobackup 1      # will use token 1
+dobackup 2      # will use token 2
 ```
 
 ### Display Information
@@ -89,7 +98,11 @@ usage: dobackup [-h] [-v] [--init] [--list-drops] [--list-backups]
                 [--delete-snap DELETE_SNAP] [--backup BACKUP] [--backup-all]
                 [--shutdown SHUTDOWN] [--powerup POWERUP]
                 [--restore-drop RESTORE_DROP] [--restore-to RESTORE_TO]
+                [token_id]
 
+positional arguments:
+  token_id              Specify token to be used, default=0, supply if you
+                        have multiple DO accounts
 
 optional arguments:
   -h, --help            show this help message and exit
