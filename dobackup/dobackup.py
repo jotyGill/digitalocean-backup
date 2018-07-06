@@ -26,6 +26,9 @@ log = logging.getLogger()
 def main():
     parser = argparse.ArgumentParser(
         description='Automated offline snapshots of digitalocean droplets')
+    parser.add_argument(
+        'token_id', nargs='?', help='Specify token to be used, default=0, supply if \
+         you have multiple DO accounts', default=0)
     parser.add_argument('-v', '--version', action='version', version="dobackup " + __version__)
     parser.add_argument('--init', dest='init',
                         help='Save token to .token file', action='store_true')
@@ -70,23 +73,32 @@ def main():
 
     args = parser.parse_args()
 
-    run(args.init, args.list_drops, args.list_backups, args.list_snaps, args.list_tagged,
-        args.list_tags, args.list_older_than, args.tag_server, args.untag_server,
-        args.tag_name, args.delete_older_than, args.delete_snap, args.backup,
+    run(args.token_id, args.init, args.list_drops, args.list_backups, args.list_snaps,
+        args.list_tagged, args.list_tags, args.list_older_than, args.tag_server,
+        args.untag_server, args.tag_name, args.delete_older_than, args.delete_snap, args.backup,
         args.backup_all, args.shutdown, args.powerup, args.restore_drop, args.restore_to)
 
 
-def set_token():
-    token_str = input("Paste The Digital Ocean's Token to Be Stored In .token File : ")
-    if len(token_str) != 64:
-        log.error("Is It Really A Token Though? The Length Should Be 64")
-        sys.exit()
-    tocken_dic = {"token0": token_str}
+def set_tokens():
+    tokens = []
+    token_dic = {}
+    print("When you have pasted all tokens you have, press enter (leave field empty)")
+    while True:
+        token_str = input("Paste The Digital Ocean's Token to Be Stored In .token File : ")
+        if token_str == "":
+            break
+        elif len(token_str) != 64:
+            log.error("Is It Really A Token Though? The Length Should Be 64")
+        tokens.append(token_str)
+    if not tokens:
+        sys.exit(1)
+    for i in range(len(tokens)):
+        token_dic["token" + str(i)] = tokens[i]
 
     try:
         with open(__basefilepath__ + '.token', 'w') as token_file:
-            json.dump(tocken_dic, token_file)
-        log.info("The Token Has Been Stored In .token File")
+            json.dump(token_dic, token_file)
+        log.info("Token/s Has Been Stored In .token File")
     except FileNotFoundError:
         log.error("FileNotFoundError: SOMETHING WRONG WITH THE PATH TO '.token'")
         sys.exit()
@@ -236,14 +248,18 @@ def set_manager(do_token):
     return manager
 
 
-def get_token():
+def get_token(token_id):
+    token_key = "token" + str(token_id)
     try:
         with open(__basefilepath__ + '.token') as do_token_file:
             do_token = json.load(do_token_file)
             # print("token", do_token["token0"])
-        return do_token["token0"]
+        return do_token[token_key]
     except FileNotFoundError:
         log.error("FileNotFoundError: PLEASE STORE THE DO ACCESS TOKEN USING '--init'")
+        sys.exit()
+    except KeyError:
+        log.error("KeyError: TOKEN KEY '{0}' NOT FOUND IN .token FILE".format(token_key))
         sys.exit()
 
 
@@ -259,10 +275,10 @@ def find_droplet(droplet_str, manager):
     for drop in all_droplets:
         log.debug(str(type(drop)) + str(drop))
         if drop.name == droplet_str:
-            log.debug("Found droplet with name == " + droplet_str)
+            log.debug("Found droplet with name == {0}".format(droplet_str))
             return drop
         if str(drop.id) == droplet_str:
-            log.debug("Found droplet with id == " + droplet_str)
+            log.debug("Found droplet with id == {0}".format(droplet_str))
             return drop
     log.error("NO DROPLET FOUND WITH THE GIVEN NAME OR ID")
     sys.exit()
@@ -326,17 +342,17 @@ def restore_droplet(droplet, snapshot, manager, do_token):
         log.error(str(snapshot) + " IS NOT A VALID SNAPSHOT FOR " + droplet.name)
 
 
-def run(init, list_drops, list_backups, list_snaps, list_tagged, list_tags,
+def run(token_id, init, list_drops, list_backups, list_snaps, list_tagged, list_tags,
         list_older_than, tag_server, untag_server, tag_name, delete_older_than,
         delete_snap, backup, backup_all, shutdown, powerup, restore_drop,
         restore_to):
     try:
         log.info("-------------------------START-------------------------\n\n")
         if init:
-            set_token()
+            set_tokens()
             install_zsh_completion()
 
-        do_token = get_token()
+        do_token = get_token(token_id)
         manager = set_manager(do_token)
 
         if list_drops:
