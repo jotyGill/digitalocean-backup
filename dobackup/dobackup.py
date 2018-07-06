@@ -188,7 +188,7 @@ def find_old_backups(manager, older_than):
     for each_snapshot in manager.get_droplet_snapshots():
         # print(each_snapshot.name, each_snapshot.created_at, each_snapshot.id)
         if "--dobackup--" in each_snapshot.name:
-            backed_on = each_snapshot.name[each_snapshot.name.find("--dobackup--") + 15:]
+            backed_on = each_snapshot.name[each_snapshot.name.find("--dobackup--") + 12:]
             # print("backed_on", backed_on)
             backed_on_date = datetime.datetime.strptime(backed_on, "%Y-%m-%d %H:%M:%S")
             if backed_on_date < last_backup_to_keep:
