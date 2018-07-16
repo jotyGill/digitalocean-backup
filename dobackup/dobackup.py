@@ -83,7 +83,7 @@ def set_tokens():
     tokens = []
     token_dic = {}
     print("When you have pasted all tokens you have, press enter (leave field empty)")
-    while True:
+    for i in range(5):
         token_str = input("Paste The Digital Ocean's Token to Be Stored In .token File : ")
         if token_str == "":
             break
@@ -154,7 +154,14 @@ def start_backup(droplet):
 
 
 def snap_completed(snap_action):
-    snap_outcome = snap_action.wait(update_every_seconds=3)
+    action_finished = False
+    while not action_finished:
+        try:
+            snap_outcome = snap_action.wait(update_every_seconds=3)
+            action_finished = True
+        except ValueError:
+            log.error("json.decoder.JSONDecodeError HAPPENED BUT IT'S FINE, TRYING AGAIN")
+            # Handle json.decoder.JSONDecodeError digitalocean.baseapi.JSONReadError
     if snap_outcome:
         log.info(str(snap_action) + " Snapshot Completed")
         return True
