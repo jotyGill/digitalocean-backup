@@ -441,8 +441,6 @@ def run(token_id, init, list_drops, list_backups, list_snaps, list_tagged, list_
             if not droplet:
                 sys.exit(1)
             turn_it_on(droplet)
-        log.info("---------------------------END----------------------------")
-        log.info("\n\n")
         if restore_drop:
             if restore_to:
                 droplet = find_droplet(restore_drop, manager)
@@ -453,6 +451,8 @@ def run(token_id, init, list_drops, list_backups, list_snaps, list_tagged, list_
                 log.warning("Please Use '--restore-to' To Provide The id Of \
 Snapshot To Restore This Droplet To")
 
+        log.info("---------------------------END----------------------------")
+        log.info("\n\n")
     except Exception as e:
         log.critical(e, exc_info=1)     # if errored at any time, mark CRITICAL and log traceback
         sys.exit(1)
