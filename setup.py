@@ -1,9 +1,10 @@
 import sys
 
 import setuptools
+
 from dobackup import __version__
 
-if sys.version_info < (3, 3):
+if sys.version_info < (3, 5):
     sys.stderr.write("ERROR: dobackup requires Python 3.5 or above." +
                      "Install using 'pip3' instead of just 'pip' \n")
     sys.exit(1)
