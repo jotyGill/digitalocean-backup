@@ -9,3 +9,4 @@ dobackup.egg*
 build
 dist
 deb_dist
+*.pyc
