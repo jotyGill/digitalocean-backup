@@ -7,6 +7,7 @@ import logging
 import logging.handlers
 import sys
 import time
+from typing import Dict, List
 
 import digitalocean
 
@@ -23,7 +24,7 @@ logging.basicConfig(
 log = logging.getLogger()
 
 
-def parse_args(argv):
+def parse_args(argv: List[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description='Automated offline snapshots of digitalocean droplets')
     parser.add_argument(
@@ -53,10 +54,10 @@ def parse_args(argv):
     parser.add_argument('--tag-name', dest='tag_name', type=str,
                         help='To be used with "--list-tags", "--tag-server" and "--backup-all",\
     default value is "dobackup"', default='dobackup')
-    parser.add_argument('--delete-older-than', dest='delete_older_than',
-                        type=int, help='Delete backups older than, in days')
-    parser.add_argument('--delete-snap', dest='delete_snap',
-                        type=str, help='Delete the snapshot with given name or id')
+    parser.add_argument('--delete-older-than', dest='delete_older_than', type=int,
+                        help='Delete backups older than, in days')
+    parser.add_argument('--delete-snap', dest='delete_snap', type=str,
+                        help='Delete the snapshot with given name or id')
     parser.add_argument('--backup', dest='backup', type=str,
                         help='Shutdown, Backup, Then Restart the droplet with given name or id')
     parser.add_argument('--backup-all', dest='backup_all',
@@ -68,13 +69,13 @@ def parse_args(argv):
                         help='Powerup, the droplet with given name or id')
     parser.add_argument('--restore-drop', dest='restore_drop', type=str,
                         help='Restore, the droplet with given name or id')
-    parser.add_argument('--restore-to', dest='restore_to',
+    parser.add_argument('--restore-to', dest='restore_to', type=str,
                         help='Snapshot id or name, to restore the droplet to')
 
     return parser.parse_args(argv[1:])
 
 
-def set_tokens():
+def set_tokens() -> bool:
     tokens = []
     token_dic = {}
     print("Press enter after pasting each token.")
@@ -88,7 +89,7 @@ def set_tokens():
         tokens.append(token_str)
     if not tokens:
         log.error("TOKEN LIST IS EMPTY, EXISTING")
-        return 1    # to be passed as the exit code
+        return False    # to be passed as the exit code
 
     for i, token in enumerate(tokens):
         token_dic["token" + str(i)] = token
@@ -96,12 +97,14 @@ def set_tokens():
         with open(__basefilepath__ + '.token', 'w') as token_file:
             json.dump(token_dic, token_file)
         log.info("Token/s Has Been Stored In .token File")
+        return True
     except FileNotFoundError:
         log.error("FileNotFoundError: SOMETHING WRONG WITH THE PATH TO '.token'")
-        return 1    # to be passed as the exit code
+        return False    # to be passed as the exit code 1
+    return False    # any other exception, or something wrong
 
 
-def install_zsh_completion():
+def install_zsh_completion() -> None:
     import os.path
     import shutil
     if os.path.exists(os.path.join(os.path.expanduser("~"), ".oh-my-zsh/custom/plugins/zsh-completions/src/")):
@@ -112,11 +115,34 @@ def install_zsh_completion():
         log.info("Zsh-completions with oh-my-zsh is not installed, can't use auto completions, but that's ok")
 
 
-def turn_it_off(droplet):
+def wait_for_action(an_action: digitalocean.Action, check_freq: int) -> bool:
+    for i in range(20):
+        try:
+            snap_outcome = an_action.wait(update_every_seconds=check_freq)
+        except json.decoder.JSONDecodeError:
+            log.error("json.decoder.JSONDecodeError HAPPENED BUT IT'S FINE, TRYING AGAIN")
+            time.sleep(2)
+            continue
+        except digitalocean.baseapi.JSONReadError:
+            log.error("json.decoder.JSONReadError HAPPENED BUT IT'S FINE, TRYING AGAIN")
+            time.sleep(2)
+            continue
+        except ValueError:
+            log.error("CATCHING ValueError, TRYING AGAIN")
+            time.sleep(2)
+            continue
+        else:
+            break
+    if snap_outcome:
+        return True
+    return False
+
+
+def turn_it_off(droplet: digitalocean.Droplet) -> bool:
     log.info("Shutting Down : " + str(droplet))
     shut_action = droplet.get_action(droplet.shutdown()["action"]["id"])
     log.debug("shut_action " + str(shut_action) + str(type(shut_action)))
-    shut_outcome = shut_action.wait(update_every_seconds=3)
+    shut_outcome = wait_for_action(shut_action, 3)
     log.debug("shut_outcome " + str(shut_outcome))
     if shut_outcome:
         for i in range(50):
@@ -125,13 +151,16 @@ def turn_it_off(droplet):
             log.debug("droplet.status " + droplet.status + " i " + str(i))
             if droplet.status == "off":
                 log.info("Shutdown Completed " + str(droplet))
-                return
-        log.error("SHUTDOWN FAILED, REPORTED 'shut_outcome'=='True' " + str(droplet) + str(shut_action))
+                return True
+        log.error("SHUTDOWN FAILED, REPORTED 'shut_outcome'=='True' " +
+                  str(droplet) + str(shut_action))
+        return False
     else:
         log.error("SHUTDOWN FAILED " + str(droplet) + str(shut_action))
+        return False
 
 
-def start_backup(droplet):
+def start_backup(droplet: digitalocean.Droplet) -> digitalocean.Action:
     snap_name = droplet.name + "--dobackup--" + \
         str(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
     # snap_name = droplet.name + "--dobackup--2018-05-02 12:37:52"
@@ -148,16 +177,8 @@ def start_backup(droplet):
     return snap_action
 
 
-def snap_completed(snap_action):
-    for i in range(20):
-        try:
-            snap_outcome = snap_action.wait(update_every_seconds=2)
-        except ValueError:
-            log.error("json.decoder.JSONDecodeError HAPPENED BUT IT'S FINE, TRYING AGAIN")
-            # Handle json.decoder.JSONDecodeError digitalocean.baseapi.JSONReadError
-            continue
-        else:
-            break
+def snap_completed(snap_action: digitalocean.Action) -> bool:
+    snap_outcome = wait_for_action(snap_action, 2)
     if snap_outcome:
         log.info(str(snap_action) + " Snapshot Completed")
         return True
@@ -166,10 +187,10 @@ def snap_completed(snap_action):
     return False
 
 
-def turn_it_on(droplet):
+def turn_it_on(droplet: digitalocean.Droplet) -> bool:
     power_up_action = droplet.get_action(droplet.power_on()["action"]["id"])
     log.debug("power_up_action " + str(power_up_action) + str(type(power_up_action)))
-    power_up_outcome = power_up_action.wait(update_every_seconds=3)
+    power_up_outcome = wait_for_action(power_up_action, 3)
     log.debug("power_up_outcome " + str(power_up_outcome))
     if power_up_outcome:
         for i in range(5):
@@ -178,13 +199,15 @@ def turn_it_on(droplet):
             log.debug("droplet.status " + droplet.status)
             if droplet.status == "active":
                 log.info("Powered Back Up " + str(droplet))
-                return
+                return True
         log.critical("DID NOT POWER UP BUT REPORTED 'powered_up'=='True' " + str(droplet))
+        return False
     else:
         log.critical("DID NOT POWER UP " + str(droplet))
+        return False
 
 
-def find_old_backups(manager, older_than):
+def find_old_backups(manager: digitalocean.Manager, older_than: int) -> List[digitalocean.Snapshot]:
     old_snapshots = []
     last_backup_to_keep = datetime.datetime.now() - datetime.timedelta(days=older_than)
 
@@ -202,7 +225,7 @@ def find_old_backups(manager, older_than):
     return old_snapshots
 
 
-def delete_snapshot(each_snapshot):
+def delete_snapshot(each_snapshot: digitalocean.Snapshot) -> None:
     log.warning("Deleting Snapshot : " + str(each_snapshot))
     destroyed = each_snapshot.destroy()
     if destroyed:
@@ -211,31 +234,32 @@ def delete_snapshot(each_snapshot):
         log.error("COULD NOT DESTROY SNAPSHOT " + str(each_snapshot))
 
 
-def tag_droplet(do_token, droplet_id, tag_name):
+def tag_droplet(do_token: str, droplet_id: str, tag_name: str) -> None:
     backup_tag = digitalocean.Tag(token=do_token, name=tag_name)
     backup_tag.create()  # create tag if not already created
     backup_tag.add_droplets([droplet_id])
 
 
-def untag_droplet(do_token, droplet_id, tag_name):      # Currely broken
+def untag_droplet(do_token: str, droplet_id: str, tag_name: str) -> None:      # Currely broken
     backup_tag = digitalocean.Tag(token=do_token, name=tag_name)
     backup_tag.remove_droplets([droplet_id])
 
 
-def list_droplets(manager):
+def list_droplets(manager: digitalocean.Manager) -> None:
     my_droplets = manager.get_all_droplets()
     log.info("Listing All Droplets:  ")
     log.info("<droplet-id>   <droplet-name>   <droplet-status>      <ip-addr>       <memory>\n")
     for droplet in my_droplets:
-        log.info(str(droplet).ljust(40) + droplet.status.ljust(12) + droplet.ip_address.ljust(22) + str(droplet.memory))
+        log.info(str(droplet).ljust(40) + droplet.status.ljust(12) +
+                 droplet.ip_address.ljust(22) + str(droplet.memory))
 
 
-def get_tagged(manager, tag_name):
+def get_tagged(manager: digitalocean.Manager, tag_name: str) -> None:
     tagged_droplets = manager.get_all_droplets(tag_name=tag_name)
     return tagged_droplets
 
 
-def list_snapshots(manager):
+def list_snapshots(manager: digitalocean.Manager) -> None:
     log.info("All Available Snapshots Are : <snapshot-name>   <snapshot-id>\n")
     snapshots = []
     for snap in manager.get_all_snapshots():
@@ -246,12 +270,12 @@ def list_snapshots(manager):
         log.info(snap[0].ljust(70) + snap[1])
 
 
-def set_manager(do_token):
+def set_manager(do_token: str) -> digitalocean.Manager:
     manager = digitalocean.Manager(token=do_token)
     return manager
 
 
-def get_token(token_id):
+def get_token(token_id: int) -> str:
     token_key = "token" + str(token_id)
     try:
         with open(__basefilepath__ + '.token') as do_token_file:
@@ -260,20 +284,20 @@ def get_token(token_id):
         return do_token[token_key]
     except FileNotFoundError:
         log.error("FileNotFoundError: PLEASE STORE THE DO ACCESS TOKEN USING '--init'")
-        return 1    # to be passed as the exit code
+        return ""
     except KeyError:
         log.error("KeyError: TOKEN KEY '{0}' NOT FOUND IN .token FILE".format(token_key))
-        return 1    # to be passed as the exit code
+        return ""
 
 
-def list_all_tags(manager):
+def list_all_tags(manager: digitalocean.Manager) -> None:
     all_tags = manager.get_all_tags()
     log.info("All Available Tags Are : ")
     for tag in all_tags:
         log.info(tag.name)
 
 
-def find_droplet(droplet_str, manager):
+def find_droplet(droplet_str: str, manager: digitalocean.Manager) -> digitalocean.Droplet:
     all_droplets = manager.get_all_droplets()
     for drop in all_droplets:
         log.debug(str(type(drop)) + str(drop))
@@ -284,11 +308,10 @@ def find_droplet(droplet_str, manager):
             log.debug("Found droplet with id == {0}".format(droplet_str))
             return drop
     log.error("NO DROPLET FOUND WITH THE GIVEN NAME OR ID")
-    return 1    # to be passed as the exit code
 
 
 # Note: Snapshot.resource_id and Snapshot.id are str not int
-def find_snapshot(snap_id_or_name, manager, do_token, droplet_id=000000):
+def find_snapshot(snap_id_or_name: str, manager: digitalocean.Manager, do_token: str, droplet_id=000000) -> digitalocean.Snapshot:
     snap_id_or_name = str(snap_id_or_name)  # for comparisions
     for snap in manager.get_all_snapshots():
         # print(type(snap.resource_id), type(droplet_id))
@@ -305,14 +328,12 @@ def find_snapshot(snap_id_or_name, manager, do_token, droplet_id=000000):
                 return snap_obj
     if droplet_id == 000000:
         log.error("NO SNAPSHOT FOUND WITH NAME OR ID OF {0}, EXITING".format(str(snap_id_or_name)))
-        return 1
     else:
         log.error("NO SNAPSHOT FOUND WITH NAME OR ID OF {0} FOR DROPLET ID {1}, EXITING".format(
             str(snap_id_or_name), str(droplet_id)))
-        return 1
 
 
-def list_taken_backups(manager):
+def list_taken_backups(manager: digitalocean.Manager) -> None:
     log.info("The Backups Taken With dobackup Are : <snapshot-name>     <snapshot-id>\n")
     backups = []
     for snap in manager.get_all_snapshots():
@@ -324,7 +345,7 @@ def list_taken_backups(manager):
         log.info(snap[0].ljust(70) + snap[1])
 
 
-def restore_droplet(droplet, snapshot, manager, do_token):
+def restore_droplet(droplet: digitalocean.Droplet, snapshot: digitalocean.Snapshot, manager: digitalocean.Manager, do_token: str):
     snap = find_snapshot(snapshot, manager, do_token, droplet_id=droplet.id)
 
     if snap:
@@ -334,7 +355,7 @@ def restore_droplet(droplet, snapshot, manager, do_token):
             log.info("Starting Restore Process")
             restore_act = droplet.get_action(droplet.restore(
                 int(snap.id))["action"]["id"])  # return action
-            restore_outcome = restore_act.wait(update_every_seconds=3)
+            restore_outcome = wait_for_action(restore_act, 3)
             if restore_outcome:
                 log.info(str(restore_act) + " Restore Completed")
             else:
@@ -344,19 +365,19 @@ def restore_droplet(droplet, snapshot, manager, do_token):
         log.error(str(snapshot) + " IS NOT A VALID SNAPSHOT FOR " + droplet.name)
 
 
-def run(token_id, init, list_drops, list_backups, list_snaps, list_tagged, list_tags,
-        list_older_than, tag_server, untag_server, tag_name, delete_older_than,
-        delete_snap, backup, backup_all, shutdown, powerup, restore_drop,
-        restore_to):
+def run(token_id: int, init: bool, list_drops: bool, list_backups: bool, list_snaps: bool, list_tagged: bool, list_tags: bool,
+        list_older_than: int, tag_server: str, untag_server: str, tag_name: str, delete_older_than: int,
+        delete_snap: str, backup: str, backup_all: bool, shutdown: str, powerup: str, restore_drop: str,
+        restore_to: str) -> int:
     try:
         log.info("-------------------------START-------------------------\n\n")
         if init:
-            if set_tokens() == 1:
+            if set_tokens() is False:
                 return 1
             install_zsh_completion()
 
         do_token = get_token(token_id)
-        if do_token == 1:
+        if do_token == "":
             return 1
         manager = set_manager(do_token)
 
@@ -374,7 +395,7 @@ def run(token_id, init, list_drops, list_backups, list_snaps, list_tagged, list_
             list_all_tags(manager)
         if tag_server:
             droplet = find_droplet(tag_server, manager)
-            if droplet == 1:
+            if droplet is None:
                 return 1
             tag_droplet(do_token, str(droplet.id), tag_name)
             tagged_droplets = get_tagged(manager, tag_name=tag_name)
@@ -382,14 +403,15 @@ def run(token_id, init, list_drops, list_backups, list_snaps, list_tagged, list_
             log.info(tagged_droplets)
         if untag_server:
             droplet = find_droplet(untag_server, manager)
-            if droplet == 1:
+            if droplet is None:
                 return 1
             untag_droplet(do_token, str(droplet.id), tag_name)
             tagged_droplets = get_tagged(manager, tag_name=tag_name)
             log.info("Now, droplets tagged with : " + tag_name + " are :")
             log.info(tagged_droplets)
         if delete_older_than or delete_older_than == 0:     # even accept value 0
-            log.info("Snapshots Older Than {0} Days, With '--dobackup--' In Their Name Are :".format(delete_older_than))
+            log.info(
+                "Snapshots Older Than {0} Days, With '--dobackup--' In Their Name Are :".format(delete_older_than))
             old_backups = find_old_backups(manager, delete_older_than)
             if old_backups:     # not an empty list
                 for abackup in old_backups:
@@ -400,11 +422,12 @@ def run(token_id, init, list_drops, list_backups, list_snaps, list_tagged, list_
             snap = find_snapshot(delete_snap, manager, do_token)
             delete_snapshot(snap)
         if list_older_than or list_older_than == 0:
-            log.info("Snapshots Older Than {0} Days, With '--dobackup--' In Their Name Are :".format(list_older_than))
+            log.info(
+                "Snapshots Older Than {0} Days, With '--dobackup--' In Their Name Are :".format(list_older_than))
             find_old_backups(manager, list_older_than)
         if backup:
             droplet = find_droplet(backup, manager)
-            if droplet == 1:
+            if droplet is None:
                 return 1
             original_status = droplet.status    # active or off
             snap_action = start_backup(droplet)
@@ -434,18 +457,18 @@ def run(token_id, init, list_drops, list_backups, list_snaps, list_tagged, list_
                 log.warning("NO DROPLET FOUND WITH THE TAG NAME " + tag_name)
         if shutdown:
             droplet = find_droplet(shutdown, manager)
-            if droplet == 1:
+            if droplet is None:
                 return 1
             turn_it_off(droplet)
         if powerup:
             droplet = find_droplet(powerup, manager)
-            if droplet == 1:
+            if droplet is None:
                 return 1
             turn_it_on(droplet)
         if restore_drop:
             if restore_to:
                 droplet = find_droplet(restore_drop, manager)
-                if droplet == 1:
+                if droplet is None:
                     return 1
                 restore_droplet(droplet, restore_to, manager, do_token)
             else:
@@ -454,20 +477,19 @@ Snapshot To Restore This Droplet To")
 
         log.info("---------------------------END----------------------------")
         log.info("\n\n")
+        return 0        # if all good, return 0
     except Exception as e:
-        log.critical(e, exc_info=1)     # if errored at any time, mark CRITICAL and log traceback
+        log.critical(e, exc_info=True)     # if errored at any time, mark CRITICAL and log traceback
         return 1
 
 
-def main():
+def main() -> int:
     args = parse_args(sys.argv)
     return_code = run(args.token_id, args.init, args.list_drops, args.list_backups, args.list_snaps,
                       args.list_tagged, args.list_tags, args.list_older_than, args.tag_server,
                       args.untag_server, args.tag_name, args.delete_older_than, args.delete_snap, args.backup,
                       args.backup_all, args.shutdown, args.powerup, args.restore_drop, args.restore_to)
-    if return_code:
-        return return_code
-    return 0
+    return return_code
 
 
 if __name__ == '__main__':
