@@ -116,19 +116,19 @@ def install_zsh_completion() -> None:
 
 
 def wait_for_action(an_action: digitalocean.Action, check_freq: int) -> bool:
-    for i in range(20):
+    for i in range(50):
         try:
             snap_outcome = an_action.wait(update_every_seconds=check_freq)
         except json.decoder.JSONDecodeError:
-            log.error("json.decoder.JSONDecodeError HAPPENED BUT IT'S FINE, TRYING AGAIN")
+            log.warning("json.decoder.JSONDecodeError HAPPENED BUT IT'S FINE, TRYING AGAIN")
             time.sleep(2)
             continue
         except digitalocean.baseapi.JSONReadError:
-            log.error("json.decoder.JSONReadError HAPPENED BUT IT'S FINE, TRYING AGAIN")
+            log.warning("json.decoder.JSONReadError HAPPENED BUT IT'S FINE, TRYING AGAIN")
             time.sleep(2)
             continue
         except ValueError:
-            log.error("CATCHING ValueError, TRYING AGAIN")
+            log.warning("CATCHING ValueError, TRYING AGAIN")
             time.sleep(2)
             continue
         else:
