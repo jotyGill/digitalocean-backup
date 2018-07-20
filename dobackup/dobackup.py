@@ -33,7 +33,7 @@ def parse_args(argv: List[str]) -> argparse.Namespace:
     parser.add_argument('-v', '--version', action='version', version="dobackup " + __version__)
     parser.add_argument('--init', dest='init',
                         help='Save token to .token file', action='store_true')
-    parser.add_argument('--list-drops', dest='list_drops',
+    parser.add_argument('-l', '--list-droplets', dest='list_droplets',
                         help='List all droplets', action='store_true')
     parser.add_argument('--list-backups', dest='list_backups',
                         help='List all snapshots with "dobackup" in their name',
@@ -47,9 +47,9 @@ def parse_args(argv: List[str]) -> argparse.Namespace:
                         help='List all used tags', action='store_true')
     parser.add_argument('--list-older-than', dest='list_older_than', type=int,
                         help='List snaps older than, in days')
-    parser.add_argument('--tag-server', dest='tag_server', type=str,
+    parser.add_argument('--tag-droplet', dest='tag_droplet', type=str,
                         help='Add tag to the provided droplet name or id')
-    parser.add_argument('--untag-server', dest='untag_server', type=str,
+    parser.add_argument('--untag-droplet', dest='untag_droplet', type=str,
                         help='Remove tag from the provided droplet name or id')
     parser.add_argument('--tag-name', dest='tag_name', type=str,
                         help='To be used with "--list-tags", "--tag-server" and "--backup-all",\
@@ -216,6 +216,9 @@ def turn_it_on(droplet: digitalocean.Droplet) -> bool:
 def find_old_backups(manager: digitalocean.Manager, older_than: int) -> List[digitalocean.Snapshot]:
     old_snapshots = []
     last_backup_to_keep = datetime.datetime.now() - datetime.timedelta(days=older_than)
+    log.info(
+        "Snapshots Older Than {0} Days, With '--dobackup--' or '--dobackup-keep--' \
+In Their Name Are :".format(older_than))
 
     for each_snapshot in manager.get_droplet_snapshots():
         # print(each_snapshot.name, each_snapshot.created_at, each_snapshot.id)
@@ -246,12 +249,12 @@ def tag_droplet(do_token: str, droplet_id: str, tag_name: str) -> None:
     backup_tag.add_droplets([droplet_id])
 
 
-def untag_droplet(do_token: str, droplet_id: str, tag_name: str) -> None:      # Currely broken
+def get_untagged(do_token: str, droplet_id: str, tag_name: str) -> None:
     backup_tag = digitalocean.Tag(token=do_token, name=tag_name)
     backup_tag.remove_droplets([droplet_id])
 
 
-def list_droplets(manager: digitalocean.Manager) -> None:
+def list_all_droplets(manager: digitalocean.Manager) -> None:
     my_droplets = manager.get_all_droplets()
     log.info("Listing All Droplets:  ")
     log.info("<droplet-id>   <droplet-name>   <droplet-status>      <ip-addr>       <memory>\n")
@@ -343,7 +346,7 @@ def list_taken_backups(manager: digitalocean.Manager) -> None:
     log.info("The Backups Taken With dobackup Are : <snapshot-name>     <snapshot-id>\n")
     backups = []
     for snap in manager.get_all_snapshots():
-        if "--dobackup--" in snap.name:
+        if "--dobackup--" in snap.name or "--dobackup-keep--" in snap.name:
             backups.append([snap.name, snap.id])
 
     backups.sort()
@@ -371,8 +374,8 @@ def restore_droplet(droplet: digitalocean.Droplet, snapshot: digitalocean.Snapsh
         log.error(str(snapshot) + " IS NOT A VALID SNAPSHOT FOR " + droplet.name)
 
 
-def run(token_id: int, init: bool, list_drops: bool, list_backups: bool, list_snaps: bool, list_tagged: bool, list_tags: bool,
-        list_older_than: int, tag_server: str, untag_server: str, tag_name: str, delete_older_than: int,
+def run(token_id: int, init: bool, list_droplets: bool, list_backups: bool, list_snaps: bool, list_tagged: bool, list_tags: bool,
+        list_older_than: int, tag_droplet: str, untag_droplet: str, tag_name: str, delete_older_than: int,
         delete_snap: str, backup: str, backup_all: bool, shutdown: str, powerup: str, restore_drop: str,
         restore_to: str, keep: bool) -> int:
     try:
@@ -387,8 +390,8 @@ def run(token_id: int, init: bool, list_drops: bool, list_backups: bool, list_sn
             return 1
         manager = set_manager(do_token)
 
-        if list_drops:
-            list_droplets(manager)
+        if list_droplets:
+            list_all_droplets(manager)
         if list_backups:
             list_taken_backups(manager)
         if list_snaps:
@@ -399,19 +402,19 @@ def run(token_id: int, init: bool, list_drops: bool, list_backups: bool, list_sn
             log.info(tagged_droplets)
         if list_tags:
             list_all_tags(manager)
-        if tag_server:
-            droplet = find_droplet(tag_server, manager)
+        if tag_droplet:
+            droplet = find_droplet(tag_droplet, manager)
             if droplet is None:
                 return 1
             tag_droplet(do_token, str(droplet.id), tag_name)
             tagged_droplets = get_tagged(manager, tag_name=tag_name)
             log.info("Now, Droplets Tagged With : " + tag_name + " Are :")
             log.info(tagged_droplets)
-        if untag_server:
-            droplet = find_droplet(untag_server, manager)
+        if untag_droplet:
+            droplet = find_droplet(untag_droplet, manager)
             if droplet is None:
                 return 1
-            untag_droplet(do_token, str(droplet.id), tag_name)
+            get_untagged(do_token, str(droplet.id), tag_name)
             tagged_droplets = get_tagged(manager, tag_name=tag_name)
             log.info("Now, droplets tagged with : " + tag_name + " are :")
             log.info(tagged_droplets)
@@ -428,8 +431,6 @@ def run(token_id: int, init: bool, list_drops: bool, list_backups: bool, list_sn
             snap = find_snapshot(delete_snap, manager, do_token)
             delete_snapshot(snap)
         if list_older_than or list_older_than == 0:
-            log.info(
-                "Snapshots Older Than {0} Days, With '--dobackup--' In Their Name Are :".format(list_older_than))
             find_old_backups(manager, list_older_than)
         if backup:
             droplet = find_droplet(backup, manager)
@@ -491,9 +492,9 @@ Snapshot To Restore This Droplet To")
 
 def main() -> int:
     args = parse_args(sys.argv)
-    return_code = run(args.token_id, args.init, args.list_drops, args.list_backups, args.list_snaps,
-                      args.list_tagged, args.list_tags, args.list_older_than, args.tag_server,
-                      args.untag_server, args.tag_name, args.delete_older_than, args.delete_snap, args.backup,
+    return_code = run(args.token_id, args.init, args.list_droplets, args.list_backups, args.list_snaps,
+                      args.list_tagged, args.list_tags, args.list_older_than, args.tag_droplet,
+                      args.untag_droplet, args.tag_name, args.delete_older_than, args.delete_snap, args.backup,
                       args.backup_all, args.shutdown, args.powerup, args.restore_drop, args.restore_to, args.keep)
     return return_code
 
