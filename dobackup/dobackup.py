@@ -30,7 +30,8 @@ def parse_args(argv: List[str]) -> argparse.Namespace:
     parser.add_argument(
         'token_id', nargs='?', help='Specify token to be used, default=0, supply if \
     you have multiple DO accounts', default=0)
-    parser.add_argument('-v', '--version', action='version', version="dobackup " + __version__)
+    parser.add_argument('-v', '-V', '--version', action='version',
+                        version="dobackup " + __version__)
     parser.add_argument('--init', dest='init',
                         help='Save token to .token file', action='store_true')
     parser.add_argument('-l', '--list-droplets', dest='list_droplets',
@@ -38,7 +39,7 @@ def parse_args(argv: List[str]) -> argparse.Namespace:
     parser.add_argument('--list-backups', dest='list_backups',
                         help='List all snapshots with "dobackup" in their name',
                         action='store_true')
-    parser.add_argument('--list-snaps', dest='list_snaps',
+    parser.add_argument('-s', '--list-snaps', dest='list_snaps',
                         help='List all snapshots', action='store_true')
     parser.add_argument('--list-tagged', dest='list_tagged',
                         help='List droplets using "--tag-name"',
