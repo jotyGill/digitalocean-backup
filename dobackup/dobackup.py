@@ -68,7 +68,7 @@ def parse_args(argv: List[str]) -> argparse.Namespace:
                         help='Shutdown, the droplet with given name or id')
     parser.add_argument('--powerup', dest='powerup', type=str,
                         help='Powerup, the droplet with given name or id')
-    parser.add_argument('--restore-drop', dest='restore_drop', type=str,
+    parser.add_argument('--restore-droplet', dest='restore_drop', type=str,
                         help='Restore, the droplet with given name or id')
     parser.add_argument('--restore-to', dest='restore_to', type=str,
                         help='Snapshot id or name, to restore the droplet to')
@@ -143,16 +143,16 @@ def wait_for_action(an_action: digitalocean.Action, check_freq: int) -> bool:
 
 
 def turn_it_off(droplet: digitalocean.Droplet) -> bool:
-    log.info("Shutting Down : " + str(droplet))
+    log.info("Shutting Down : {!s}".format(droplet))
     shut_action = droplet.get_action(droplet.shutdown()["action"]["id"])
-    log.debug("shut_action " + str(shut_action) + str(type(shut_action)))
+    log.debug("shut_action {!s} {!s}".format(shut_action, type(shut_action)))
     shut_outcome = wait_for_action(shut_action, 3)
-    log.debug("shut_outcome " + str(shut_outcome))
+    log.debug("shut_outcome {}".format(shut_outcome))
     if shut_outcome:
         for i in range(50):
             time.sleep(3)
             droplet.load()  # refresh droplet data
-            log.debug("droplet.status " + droplet.status + " i " + str(i))
+            log.debug("droplet.status {} i== {!s}".format(droplet.status, i))
             if droplet.status == "off":
                 log.info("Shutdown Completed " + str(droplet))
                 return True
@@ -218,8 +218,8 @@ def find_old_backups(manager: digitalocean.Manager, older_than: int) -> List[dig
     old_snapshots = []
     last_backup_to_keep = datetime.datetime.now() - datetime.timedelta(days=older_than)
     log.info(
-        "Snapshots Older Than {0} Days, With '--dobackup--' or '--dobackup-keep--' \
-In Their Name Are :".format(older_than))
+        "Snapshots Older Than {} Days, With '--dobackup--' or '--dobackup-keep--'"
+        "In Their Name Are :".format(older_than))
 
     for each_snapshot in manager.get_droplet_snapshots():
         # print(each_snapshot.name, each_snapshot.created_at, each_snapshot.id)
@@ -270,14 +270,10 @@ def get_tagged(manager: digitalocean.Manager, tag_name: str) -> None:
 
 
 def list_snapshots(manager: digitalocean.Manager) -> None:
-    log.info("All Available Snapshots Are : <snapshot-name>   <snapshot-id>\n")
-    snapshots = []
-    for snap in manager.get_all_snapshots():
-        snapshots.append([snap.name, snap.id])
-
+    log.info("All Available Snapshots Are : <snapshot-name>          <snapshot-id>\n")
+    snapshots = [[snap.name, snap.id] for snap in manager.get_all_snapshots()]
     snapshots.sort()
-    for snap in snapshots:
-        log.info(snap[0].ljust(70) + snap[1])
+    [log.info(snap[0].ljust(70) + snap[1]) for snap in snapshots]
 
 
 def set_manager(do_token: str) -> digitalocean.Manager:
@@ -296,7 +292,7 @@ def get_token(token_id: int) -> str:
         log.error("FileNotFoundError: PLEASE STORE THE DO ACCESS TOKEN USING '--init'")
         return ""
     except KeyError:
-        log.error("KeyError: TOKEN KEY '{0}' NOT FOUND IN .token FILE".format(token_key))
+        log.error("KeyError: TOKEN KEY '{}' NOT FOUND IN .token FILE".format(token_key))
         return ""
 
 
@@ -312,10 +308,10 @@ def find_droplet(droplet_str: str, manager: digitalocean.Manager) -> digitalocea
     for drop in all_droplets:
         log.debug(str(type(drop)) + str(drop))
         if drop.name == droplet_str:
-            log.debug("Found droplet with name == {0}".format(droplet_str))
+            log.debug("Found droplet with name == {}".format(droplet_str))
             return drop
         if str(drop.id) == droplet_str:
-            log.debug("Found droplet with id == {0}".format(droplet_str))
+            log.debug("Found droplet with id == {}".format(droplet_str))
             return drop
     log.error("NO DROPLET FOUND WITH THE GIVEN NAME OR ID")
 
@@ -328,19 +324,19 @@ def find_snapshot(snap_id_or_name: str, manager: digitalocean.Manager, do_token:
         if droplet_id == 000000:        # meaning, doesn't matter
             if snap_id_or_name == str(snap.id) or snap_id_or_name == snap.name:
                 snap_obj = digitalocean.Snapshot.get_object(do_token, snap.id)
-                log.info("snap id and name " + str(snap.id) + " " + str(snap.name))
+                log.info("snap id and name {!s} {!s}".format(snap.id, snap.name))
                 return snap_obj
         # to filter snapshots for a specific droplet
         elif droplet_id == int(snap.resource_id):
-            log.info("snap id and name " + str(snap.id) + " " + str(snap.name))
+            log.info("snap id and name {!s} {!s}".format(snap.id, snap.name))
             if snap_id_or_name == str(snap.id) or snap_id_or_name == snap.name:
                 snap_obj = digitalocean.Snapshot.get_object(do_token, snap.id)
                 return snap_obj
     if droplet_id == 000000:
-        log.error("NO SNAPSHOT FOUND WITH NAME OR ID OF {0}, EXITING".format(str(snap_id_or_name)))
+        log.error("NO SNAPSHOT FOUND WITH NAME OR ID OF {!s}, EXITING".format(snap_id_or_name))
     else:
-        log.error("NO SNAPSHOT FOUND WITH NAME OR ID OF {0} FOR DROPLET ID {1}, EXITING".format(
-            str(snap_id_or_name), str(droplet_id)))
+        log.error("NO SNAPSHOT FOUND WITH NAME OR ID OF {!s} FOR DROPLET ID {!s}, EXITING".format(
+            snap_id_or_name, droplet_id))
 
 
 def list_taken_backups(manager: digitalocean.Manager) -> None:
@@ -351,8 +347,7 @@ def list_taken_backups(manager: digitalocean.Manager) -> None:
             backups.append([snap.name, snap.id])
 
     backups.sort()
-    for snap in backups:
-        log.info(snap[0].ljust(70) + snap[1])
+    [log.info(snap[0].ljust(70) + snap[1]) for snap in backups]
 
 
 def restore_droplet(droplet: digitalocean.Droplet, snapshot: digitalocean.Snapshot, manager: digitalocean.Manager, do_token: str):
@@ -409,7 +404,7 @@ def run(token_id: int, init: bool, list_droplets: bool, list_backups: bool, list
                 return 1
             tag_droplet(do_token, str(droplet.id), tag_name)
             tagged_droplets = get_tagged(manager, tag_name=tag_name)
-            log.info("Now, Droplets Tagged With : " + tag_name + " Are :")
+            log.info("Now, Droplets Tagged With : {} Are :".format(tag_name))
             log.info(tagged_droplets)
         if untag_droplet:
             droplet = find_droplet(untag_droplet, manager)
@@ -421,7 +416,7 @@ def run(token_id: int, init: bool, list_droplets: bool, list_backups: bool, list
             log.info(tagged_droplets)
         if delete_older_than or delete_older_than == 0:     # even accept value 0
             log.info(
-                "Snapshots Older Than {0} Days, With '--dobackup--' In Their Name Are :".format(delete_older_than))
+                "Snapshots Older Than {} Days, With '--dobackup--' In Their Name Are :".format(delete_older_than))
             old_backups = find_old_backups(manager, delete_older_than)
             if old_backups:     # not an empty list
                 for abackup in old_backups:
@@ -443,7 +438,7 @@ def run(token_id: int, init: bool, list_droplets: bool, list_backups: bool, list
             if original_status != "off":
                 turn_it_on(droplet)
             if not snap_done:
-                log.error("SNAPSHOT FAILED " + str(snap_action) + str(droplet))
+                log.error("SNAPSHOT FAILED {} {}".format(snap_action, droplet))
         if backup_all:
             # stores all {"snap_action": snap_action, "droplet_id": droplet}
             snap_and_drop_ids = []
@@ -454,13 +449,13 @@ def run(token_id: int, init: bool, list_droplets: bool, list_backups: bool, list
                     droplet = manager.get_droplet(drop.id)
                     snap_action = start_backup(droplet, keep)
                     snap_and_drop_ids.append({"snap_action": snap_action, "droplet_id": droplet.id})
-                log.info("Backups Started, snap_and_drop_ids:" + str(snap_and_drop_ids))
+                log.info("Backups Started, snap_and_drop_ids: {!s}".format())
                 for snap_id_pair in snap_and_drop_ids:
                     snap_done = snap_completed(snap_id_pair["snap_action"])
                     # print("snap_action and droplet_id", snap_id_pair)
                     turn_it_on(manager.get_droplet(snap_id_pair["droplet_id"]))
                     if not snap_done:
-                        log.error("SNAPSHOT FAILED " + str(snap_action) + str(droplet))
+                        log.error("SNAPSHOT FAILED {!s} {!s}".format(snap_action, droplet))
             else:  # no doplets with the --tag-name
                 log.warning("NO DROPLET FOUND WITH THE TAG NAME " + tag_name)
         if shutdown:
@@ -480,8 +475,8 @@ def run(token_id: int, init: bool, list_droplets: bool, list_backups: bool, list
                     return 1
                 restore_droplet(droplet, restore_to, manager, do_token)
             else:
-                log.warning("Please Use '--restore-to' To Provide The id Of \
-Snapshot To Restore This Droplet To")
+                log.warning("Please Use '--restore-to' To Provide The id Of "
+                            "Snapshot To Restore This Droplet To")
 
         log.info("---------------------------END----------------------------")
         log.info("\n\n")
