@@ -87,7 +87,7 @@ Using amazing utility [healthchecks](https://github.com/healthchecks/healthcheck
 ### Perform Restore
 To restore a server using it's name or id and snapshot's name or id
 ``` bash
-dobackup --restore-drop ubuntu-18-04 --restore-to "ubuntu-18-04--dobackup--2018-06-01 14:36:07"
+dobackup --restore-droplet ubuntu-18-04 --restore-to "ubuntu-18-04--dobackup--2018-06-01 14:36:07"
 ```
 
 ### Delete Old Backups
@@ -112,7 +112,7 @@ usage: dobackup [-h] [-v] [--init] [-l] [--list-backups] [-s] [--list-tagged]
                 [--tag-name TAG_NAME] [--delete-older-than DELETE_OLDER_THAN]
                 [--delete-snap DELETE_SNAP] [--backup BACKUP] [--backup-all]
                 [--shutdown SHUTDOWN] [--powerup POWERUP]
-                [--restore-drop RESTORE_DROP] [--restore-to RESTORE_TO]
+                [--restore-droplet RESTORE_DROP] [--restore-to RESTORE_TO]
                 [--keep]
                 [token_id]
 
@@ -149,7 +149,7 @@ optional arguments:
                         tag-name"
   --shutdown SHUTDOWN   Shutdown, the droplet with given name or id
   --powerup POWERUP     Powerup, the droplet with given name or id
-  --restore-drop RESTORE_DROP
+  --restore-droplet RESTORE_DROP
                         Restore, the droplet with given name or id
   --restore-to RESTORE_TO
                         Snapshot id or name, to restore the droplet to
