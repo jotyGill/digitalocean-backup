@@ -24,7 +24,7 @@ setuptools.setup(
     url='https://github.com/jotyGill/digitalocean-backup/',
     keywords=[
         'backup', 'automated-backup', 'digitalocean', 'digital-ocean',
-        'backups', 'automation'],
+        'backups', 'automation', 'digitalocean-backup', 'snapshots'],
     install_requires=['python-digitalocean'],
     platforms=['GNU/Linux', 'Ubuntu', 'Debian', 'Kali', 'CentOS', 'Arch', 'Fedora'],
     packages=setuptools.find_packages(),
