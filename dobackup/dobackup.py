@@ -246,9 +246,14 @@ def tag_droplet(do_token: str, droplet_id: str, tag_name: str) -> None:
     backup_tag.add_droplets([droplet_id])
 
 
-def get_untagged(do_token: str, droplet_id: str, tag_name: str) -> None:
+def get_untagged(do_token: str, droplet_id: str, tag_name: str) -> bool:
     backup_tag = digitalocean.Tag(token=do_token, name=tag_name)
-    backup_tag.remove_droplets([droplet_id])
+    try:
+        backup_tag.remove_droplets([droplet_id])
+        return True
+    except digitalocean.baseapi.NotFoundError:
+        log.error("THE GIVEN TAG DOES NOT EXIST")
+        return False
 
 
 def list_all_droplets(manager: digitalocean.Manager) -> None:
@@ -406,7 +411,8 @@ def run(token_id: int, init: bool, list_droplets: bool, list_backups: bool, list
             droplet = find_droplet(untag_droplet, manager)
             if droplet is None:
                 return 1
-            get_untagged(do_token, str(droplet.id), tag_name)
+            if get_untagged(do_token, str(droplet.id), tag_name) is False:
+                return 1
             tagged_droplets = get_tagged(manager, tag_name=tag_name)
             log.info("Now, droplets tagged with : " + tag_name + " are :")
             log.info(tagged_droplets)
