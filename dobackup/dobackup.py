@@ -240,7 +240,7 @@ def delete_snapshot(each_snapshot: digitalocean.Snapshot) -> None:
         log.error("COULD NOT DESTROY SNAPSHOT " + str(each_snapshot))
 
 
-def tag_droplet(do_token: str, droplet_id: str, tag_name: str) -> None:
+def do_tag_droplet(do_token: str, droplet_id: str, tag_name: str) -> None:
     backup_tag = digitalocean.Tag(token=do_token, name=tag_name)
     backup_tag.create()  # create tag if not already created
     backup_tag.add_droplets([droplet_id])
@@ -403,7 +403,7 @@ def run(token_id: int, init: bool, list_droplets: bool, list_backups: bool, list
             droplet = find_droplet(tag_droplet, manager)
             if droplet is None:
                 return 1
-            tag_droplet(do_token, str(droplet.id), tag_name)
+            do_tag_droplet(do_token, str(droplet.id), tag_name)
             tagged_droplets = get_tagged(manager, tag_name=tag_name)
             log.info("Now, Droplets Tagged With : {} Are :".format(tag_name))
             log.info(tagged_droplets)
