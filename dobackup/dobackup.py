@@ -185,7 +185,7 @@ def start_backup(droplet: digitalocean.Droplet, keep: bool) -> digitalocean.Acti
 
 
 def snap_completed(snap_action: digitalocean.Action) -> bool:
-    snap_outcome = wait_for_action(snap_action, 2)
+    snap_outcome = wait_for_action(snap_action, 10)
     if snap_outcome:
         log.info(str(snap_action) + " Snapshot Completed")
         return True
@@ -361,7 +361,7 @@ def restore_droplet(droplet: digitalocean.Droplet, snapshot: digitalocean.Snapsh
             log.info("Starting Restore Process")
             restore_act = droplet.get_action(droplet.restore(
                 int(snap.id))["action"]["id"])  # return action
-            restore_outcome = wait_for_action(restore_act, 3)
+            restore_outcome = wait_for_action(restore_act, 10)
             if restore_outcome:
                 log.info(str(restore_act) + " Restore Completed")
             else:
