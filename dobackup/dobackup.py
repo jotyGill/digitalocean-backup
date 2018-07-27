@@ -217,9 +217,6 @@ def turn_it_on(droplet: digitalocean.Droplet) -> bool:
 def find_old_backups(manager: digitalocean.Manager, older_than: int) -> List[digitalocean.Snapshot]:
     old_snapshots = []
     last_backup_to_keep = datetime.datetime.now() - datetime.timedelta(days=older_than)
-    log.info(
-        "Snapshots Older Than {} Days, With '--dobackup--' or '--dobackup-keep--'"
-        "In Their Name Are :".format(older_than))
 
     for each_snapshot in manager.get_droplet_snapshots():
         # print(each_snapshot.name, each_snapshot.created_at, each_snapshot.id)
@@ -229,7 +226,6 @@ def find_old_backups(manager: digitalocean.Manager, older_than: int) -> List[dig
             backed_on_date = datetime.datetime.strptime(backed_on, "%Y-%m-%d %H:%M:%S")
             if backed_on_date < last_backup_to_keep:
                 old_snapshots.append(each_snapshot)
-                print(each_snapshot)
 
     # print("OLD SNAPSHOTS", old_snapshots)
     return old_snapshots
@@ -415,19 +411,24 @@ def run(token_id: int, init: bool, list_droplets: bool, list_backups: bool, list
             log.info("Now, droplets tagged with : " + tag_name + " are :")
             log.info(tagged_droplets)
         if delete_older_than or delete_older_than == 0:     # even accept value 0
-            log.info(
-                "Snapshots Older Than {} Days, With '--dobackup--' In Their Name Are :".format(delete_older_than))
             old_backups = find_old_backups(manager, delete_older_than)
+            log.info(
+                "Snapshots Older Than {} Days, With '--dobackup--' In Their Name Are :"
+                " \n".format(delete_older_than))
+            [log.info(str(x)) for x in old_backups]
             if old_backups:     # not an empty list
-                for abackup in old_backups:
-                    delete_snapshot(abackup)
+                [delete_snapshot(snap_x) for snap_x in old_backups]
             else:
                 log.info("No Snapshot Is Old Enough To be Deleted")
         if delete_snap:
             snap = find_snapshot(delete_snap, manager, do_token)
             delete_snapshot(snap)
         if list_older_than or list_older_than == 0:
-            find_old_backups(manager, list_older_than)
+            old_backups = find_old_backups(manager, list_older_than)
+            log.info(
+                "Snapshots Older Than {} Days, With '--dobackup--' or '--dobackup-keep--'"
+                "In Their Name Are : \n".format(list_older_than))
+            [log.info(str(x)) for x in old_backups]
         if backup:
             droplet = find_droplet(backup, manager)
             if droplet is None:
