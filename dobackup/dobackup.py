@@ -11,7 +11,7 @@ from typing import Dict, List
 
 import digitalocean
 
-from dobackup import __basefilepath__, __version__
+from .__init__ import __basefilepath__, __version__
 
 logging.basicConfig(
     format="%(asctime)s [%(levelname)-5.5s]  %(message)s",
@@ -246,7 +246,7 @@ def do_tag_droplet(do_token: str, droplet_id: str, tag_name: str) -> None:
     backup_tag.add_droplets([droplet_id])
 
 
-def get_untagged(do_token: str, droplet_id: str, tag_name: str) -> bool:
+def do_untag_droplet(do_token: str, droplet_id: str, tag_name: str) -> bool:
     backup_tag = digitalocean.Tag(token=do_token, name=tag_name)
     try:
         backup_tag.remove_droplets([droplet_id])
@@ -411,7 +411,7 @@ def run(token_id: int, init: bool, list_droplets: bool, list_backups: bool, list
             droplet = find_droplet(untag_droplet, manager)
             if droplet is None:
                 return 1
-            if get_untagged(do_token, str(droplet.id), tag_name) is False:
+            if do_untag_droplet(do_token, str(droplet.id), tag_name) is False:
                 return 1
             tagged_droplets = get_tagged(manager, tag_name=tag_name)
             log.info("Now, droplets tagged with : " + tag_name + " are :")
@@ -432,7 +432,7 @@ def run(token_id: int, init: bool, list_droplets: bool, list_backups: bool, list
         if list_older_than or list_older_than == 0:
             old_backups = find_old_backups(manager, list_older_than)
             log.info(
-                "Snapshots Older Than {} Days, With '--dobackup--' or '--dobackup-keep--'"
+                "Snapshots Older Than {!s} Days, With '--dobackup--' or '--dobackup-keep--'"
                 "In Their Name Are : \n".format(list_older_than))
             [log.info(str(x)) for x in old_backups]
         if backup:
@@ -445,7 +445,7 @@ def run(token_id: int, init: bool, list_droplets: bool, list_backups: bool, list
             if original_status != "off":
                 turn_it_on(droplet)
             if not snap_done:
-                log.error("SNAPSHOT FAILED {} {}".format(snap_action, droplet))
+                log.error("SNAPSHOT FAILED {!s} {!s}".format(snap_action, droplet))
         if backup_all:
             # stores all {"snap_action": snap_action, "droplet_id": droplet}
             snap_and_drop_ids = []
@@ -456,7 +456,7 @@ def run(token_id: int, init: bool, list_droplets: bool, list_backups: bool, list
                     droplet = manager.get_droplet(drop.id)
                     snap_action = start_backup(droplet, keep)
                     snap_and_drop_ids.append({"snap_action": snap_action, "droplet_id": droplet.id})
-                log.info("Backups Started, snap_and_drop_ids: {!s}".format())
+                log.info("Backups Started, snap_and_drop_ids: {!s}".format(snap_and_drop_ids))
                 for snap_id_pair in snap_and_drop_ids:
                     snap_done = snap_completed(snap_id_pair["snap_action"])
                     # print("snap_action and droplet_id", snap_id_pair)
