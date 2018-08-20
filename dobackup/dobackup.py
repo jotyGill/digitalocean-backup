@@ -326,7 +326,8 @@ def find_droplet(droplet_str: str, manager: digitalocean.Manager) -> digitalocea
 
 
 # Note: Snapshot.resource_id and Snapshot.id are str not int
-def find_snapshot(snap_id_or_name: str, manager: digitalocean.Manager, do_token: str, droplet_id=000000) -> digitalocean.Snapshot:
+def find_snapshot(snap_id_or_name: str, manager: digitalocean.Manager,
+                  do_token: str, droplet_id=000000) -> digitalocean.Snapshot:
     snap_id_or_name = str(snap_id_or_name)  # for comparisions
     for snap in manager.get_all_snapshots():
         # print(type(snap.resource_id), type(droplet_id))
@@ -359,7 +360,8 @@ def list_taken_backups(manager: digitalocean.Manager) -> None:
     [log.info(snap[0].ljust(70) + snap[1]) for snap in backups]
 
 
-def restore_droplet(droplet: digitalocean.Droplet, snapshot: digitalocean.Snapshot, manager: digitalocean.Manager, do_token: str):
+def restore_droplet(droplet: digitalocean.Droplet, snapshot: digitalocean.Snapshot,
+                    manager: digitalocean.Manager, do_token: str):
     snap = find_snapshot(snapshot, manager, do_token, droplet_id=droplet.id)
 
     if snap:
@@ -379,10 +381,10 @@ def restore_droplet(droplet: digitalocean.Droplet, snapshot: digitalocean.Snapsh
         log.error(str(snapshot) + " IS NOT A VALID SNAPSHOT FOR " + droplet.name)
 
 
-def run(token_id: int, init: bool, list_droplets: bool, list_backups: bool, list_snaps: bool, list_tagged: bool, list_tags: bool,
-        list_older_than: int, tag_droplet: str, untag_droplet: str, tag_name: str, delete_older_than: int,
-        delete_snap: str, backup: str, backup_all: bool, shutdown: str, powerup: str, restore_drop: str,
-        restore_to: str, keep: bool) -> int:
+def run(token_id: int, init: bool, list_droplets: bool, list_backups: bool, list_snaps: bool,
+        list_tagged: bool, list_tags: bool, list_older_than: int, tag_droplet: str, untag_droplet: str,
+        tag_name: str, delete_older_than: int, delete_snap: str, backup: str, backup_all: bool,
+        shutdown: str, powerup: str, restore_drop: str, restore_to: str, keep: bool) -> int:
     try:
         log.info("-------------------------START-------------------------\n\n")
         if init:
