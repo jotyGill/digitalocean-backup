@@ -125,15 +125,19 @@ def wait_for_action(an_action: digitalocean.Action, check_freq: int) -> bool:
             snap_outcome = an_action.wait(update_every_seconds=check_freq)
         except json.decoder.JSONDecodeError:
             log.warning("json.decoder.JSONDecodeError HAPPENED BUT IT'S FINE, TRYING AGAIN")
-            time.sleep(2)
+            time.sleep(5)
             continue
         except digitalocean.baseapi.JSONReadError:
             log.warning("json.decoder.JSONReadError HAPPENED BUT IT'S FINE, TRYING AGAIN")
-            time.sleep(2)
+            time.sleep(5)
+            continue
+        except digitalocean.baseapi.DataReadError:
+            log.warning("json.decoder.DataReadError HAPPENED BUT IT'S FINE, TRYING AGAIN")
+            time.sleep(5)
             continue
         except ValueError:
             log.warning("CATCHING ValueError, TRYING AGAIN")
-            time.sleep(2)
+            time.sleep(5)
             continue
         else:
             break
