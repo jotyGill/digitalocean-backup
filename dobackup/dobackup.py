@@ -135,6 +135,10 @@ def wait_for_action(an_action: digitalocean.Action, check_freq: int) -> bool:
             log.warning("json.decoder.DataReadError HAPPENED BUT IT'S FINE, TRYING AGAIN")
             time.sleep(5)
             continue
+        except digitalocean.baseapi.Error:
+            log.warning("CATCHING digitalocean.baseapi.Error, TRYING AGAIN")
+            time.sleep(5)
+            continue
         except ValueError:
             log.warning("CATCHING ValueError, TRYING AGAIN")
             time.sleep(5)
