@@ -28,7 +28,7 @@ def parse_args(argv: List[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description='Automated offline snapshots of digitalocean droplets')
     parser.add_argument(
-        'token_id', nargs='?', help='Specify token to be used, default=0, supply if \
+        'token_id', nargs='?', help='Specify token number to be used, default=0, supply only if \
     you have multiple DO accounts', default=0)
     parser.add_argument('-v', '-V', '--version', action='version',
                         version="dobackup " + __version__)
@@ -53,7 +53,7 @@ def parse_args(argv: List[str]) -> argparse.Namespace:
     parser.add_argument('--untag-droplet', dest='untag_droplet', type=str,
                         help='Remove tag from the provided droplet name or id')
     parser.add_argument('--tag-name', dest='tag_name', type=str,
-                        help='To be used with "--list-tags", "--tag-server" and "--backup-all",\
+                        help='To be used with "--list-tags", "--tag-droplet" and "--backup-all",\
     default value is "dobackup"', default='dobackup')
     parser.add_argument('--delete-older-than', dest='delete_older_than', type=int,
                         help='Delete backups older than, in days')
