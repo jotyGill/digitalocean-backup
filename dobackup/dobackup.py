@@ -10,6 +10,7 @@ import time
 from typing import Dict, List
 
 import digitalocean
+import requests
 
 from .__init__ import __basefilepath__, __version__
 
@@ -123,6 +124,13 @@ def wait_for_action(an_action: digitalocean.Action, check_freq: int) -> bool:
     for i in range(50):
         try:
             snap_outcome = an_action.wait(update_every_seconds=check_freq)
+        except requests.exceptions.RequestException:
+            log.warning("'requests' reported error, TRYING AGAIN")
+            # Excepts
+            # requests.exceptions.SSLError: HTTPSConnectionPool
+            # (host='api.digitalocean.com', port=443): Max retries exceeded with url:
+            time.sleep(5)
+            continue
         except json.decoder.JSONDecodeError:
             log.warning("json.decoder.JSONDecodeError HAPPENED BUT IT'S FINE, TRYING AGAIN")
             time.sleep(5)
@@ -217,9 +225,9 @@ def turn_it_on(droplet: digitalocean.Droplet) -> bool:
                 return True
         log.critical("DID NOT POWER UP BUT REPORTED 'powered_up'=='True' " + str(droplet))
         return False
-    else:
-        log.critical("DID NOT POWER UP " + str(droplet))
-        return False
+
+    log.critical("DID NOT POWER UP " + str(droplet))
+    return False
 
 
 def find_old_backups(manager: digitalocean.Manager, older_than: int) -> List[digitalocean.Snapshot]:
