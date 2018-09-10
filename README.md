@@ -1,6 +1,6 @@
 # dobackup
 <p align="center">
-<a href="https://pepy.tech/project/dobackup"><img alt="Downloads" src="https://pepy.tech/badge/dobackup"></a>
+<a href="https://pepy.tech/project/dobackup"><img alt="Downloads" src="https://pepy.tech/badge/dobackup"></a> </p>
 Simple Automated offline snapshots of digitalocean droplets utilising [python-digitalocean](https://github.com/koalalorenzo/python-digitalocean).
 The script safely shutdowns a given droplet or all droplets with a give tag then performs snapshots of them, Then
 it turns them back on. Every step is logged as well as displayed in the console output.
