@@ -219,11 +219,14 @@ def wait_for_action(an_action: digitalocean.Action, check_freq: int) -> bool:
             log.warning("CATCHING ValueError, TRYING AGAIN")
             time.sleep(5)
             continue
-        else:
-            break
-    if snap_outcome:
-        return True
-    return False
+        except Exception:
+            log.error("CATCHING Unknown Error, TRYING AGAIN")
+            time.sleep(5)
+            continue
+
+        if snap_outcome:
+            return True
+        return False
 
 
 def turn_it_off(droplet: digitalocean.Droplet) -> bool:
