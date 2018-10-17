@@ -229,9 +229,57 @@ def wait_for_action(an_action: digitalocean.Action, check_freq: int) -> bool:
         return False
 
 
+def send_command(
+        droplet: digitalocean.Droplet, command: str, command_args: List = []) -> digitalocean.Action:
+
+    # create dynamic function to run 'command' str as method
+    # func = send_command(droplet, 'shutdown'), then func() == droplet.shutdown()
+    run_command = getattr(droplet, command)
+
+    for attempt in range(5):
+        try:
+            command_output = run_command(*command_args)
+        except json.decoder.JSONDecodeError:
+            log.warning(
+                "json.decoder.JSONDecodeError WHILE SENDING droplet.'{}', TRYING AGAIN".format(command))
+            time.sleep(5)
+            continue
+        except digitalocean.baseapi.JSONReadError:
+            log.warning(
+                "json.decoder.JSONReadError WHILE SENDING droplet.'{}', TRYING AGAIN".format(command))
+            time.sleep(5)
+            continue
+        except digitalocean.baseapi.DataReadError:
+            log.warning(
+                "json.decoder.DataReadError WHILE SENDING droplet.'{}', TRYING AGAIN".format(command))
+            time.sleep(5)
+            continue
+        except digitalocean.baseapi.Error:
+            log.warning(
+                "digitalocean.baseapi.Error, WHILE SENDING droplet.'{}', TRYING AGAIN".format(command))
+            time.sleep(5)
+            continue
+        except ValueError:
+            log.warning("ValueError, WHILE SENDING droplet.'{}', TRYING AGAIN".format(command))
+            time.sleep(5)
+            continue
+        except Exception:
+            log.error("Unknown Error, WHILE SENDING droplet.'{}', TRYING AGAIN".format(command))
+            time.sleep(5)
+            continue
+        else:
+            return command_output
+    log.critical("NEVER RETURNED, WHILE SENDING droplet.'{}'".format(command))
+    sys.exit(1)
+
+
 def turn_it_off(droplet: digitalocean.Droplet) -> bool:
     log.info("Shutting Down : {!s}".format(droplet))
-    shut_action = droplet.get_action(droplet.shutdown()["action"]["id"])
+    # send shutdown and capture that action's id
+    shut_id = send_command(droplet, "shutdown")["action"]["id"]
+    # print("shut_command: ", shut_command)
+    shut_action = send_command(droplet, "get_action", [shut_id])
+
     log.debug("shut_action {!s} {!s}".format(shut_action, type(shut_action)))
     shut_outcome = wait_for_action(shut_action, 3)
     log.debug("shut_outcome {}".format(shut_outcome))
@@ -284,7 +332,9 @@ def snap_completed(snap_action: digitalocean.Action) -> bool:
 
 
 def turn_it_on(droplet: digitalocean.Droplet) -> bool:
-    power_up_action = droplet.get_action(droplet.power_on()["action"]["id"])
+    log.info("Powering Up {!s}".format(droplet))
+    power_up_id = send_command(droplet, "power_on")["action"]["id"]
+    power_up_action = send_command(droplet, "get_action", [power_up_id])
     log.debug("power_up_action " + str(power_up_action) + str(type(power_up_action)))
     power_up_outcome = wait_for_action(power_up_action, 3)
     log.debug("power_up_outcome " + str(power_up_outcome))
@@ -294,7 +344,7 @@ def turn_it_on(droplet: digitalocean.Droplet) -> bool:
             droplet.load()  # refresh droplet data
             log.debug("droplet.status " + droplet.status)
             if droplet.status == "active":
-                log.info("Powered Back Up " + str(droplet))
+                log.info("Powered Back Up {!s}".format(droplet))
                 return True
         log.critical("DID NOT POWER UP BUT REPORTED 'powered_up'=='True' " + str(droplet))
         return False
@@ -310,7 +360,7 @@ def find_old_backups(manager: digitalocean.Manager, older_than: int) -> List[dig
     for each_snapshot in manager.get_droplet_snapshots():
         # print(each_snapshot.name, each_snapshot.created_at, each_snapshot.id)
         if "--dobackup--" in each_snapshot.name:
-            backed_on = each_snapshot.name[each_snapshot.name.find("--dobackup--") + 12 :]
+            backed_on = each_snapshot.name[each_snapshot.name.find("--dobackup--") + 12:]
             # print("backed_on", backed_on)
             backed_on_date = datetime.datetime.strptime(backed_on, "%Y-%m-%d %H:%M:%S")
             if backed_on_date < last_backup_to_keep:
