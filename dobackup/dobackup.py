@@ -7,7 +7,7 @@ import logging
 import logging.handlers
 import sys
 import time
-from typing import Dict, List
+from typing import Any, Dict, List
 
 import digitalocean
 import requests
@@ -230,55 +230,55 @@ def wait_for_action(an_action: digitalocean.Action, check_freq: int) -> bool:
 
 
 def send_command(
-        droplet: digitalocean.Droplet, command: str, command_args: List = []) -> digitalocean.Action:
+        retries: int, obj: Any, method: str, method_args: List = []) -> Any:
 
-    # create dynamic function to run 'command' str as method
+    # create dynamic function to run 'method' str as method
     # func = send_command(droplet, 'shutdown'), then func() == droplet.shutdown()
-    run_command = getattr(droplet, command)
-
-    for attempt in range(5):
+    run_command = getattr(obj, method)
+    print("EXECUTING COMMAND {!s}.{}()".format(obj, method))
+    for attempt in range(retries):
         try:
-            command_output = run_command(*command_args)
+            command_output = run_command(*method_args)
         except json.decoder.JSONDecodeError:
             log.warning(
-                "json.decoder.JSONDecodeError WHILE SENDING droplet.'{}', TRYING AGAIN".format(command))
+                "json.decoder.JSONDecodeError WHILE SENDING {!s}.{}(), TRYING AGAIN".format(obj, method))
             time.sleep(5)
             continue
         except digitalocean.baseapi.JSONReadError:
             log.warning(
-                "json.decoder.JSONReadError WHILE SENDING droplet.'{}', TRYING AGAIN".format(command))
+                "json.decoder.JSONReadError WHILE SENDING {!s}.{}(), TRYING AGAIN".format(obj, method))
             time.sleep(5)
             continue
         except digitalocean.baseapi.DataReadError:
             log.warning(
-                "json.decoder.DataReadError WHILE SENDING droplet.'{}', TRYING AGAIN".format(command))
+                "json.decoder.DataReadError WHILE SENDING {!s}.{}(), TRYING AGAIN".format(obj, method))
             time.sleep(5)
             continue
         except digitalocean.baseapi.Error:
             log.warning(
-                "digitalocean.baseapi.Error, WHILE SENDING droplet.'{}', TRYING AGAIN".format(command))
+                "digitalocean.baseapi.Error, WHILE SENDING {!s}.{}(), TRYING AGAIN".format(obj, method))
             time.sleep(5)
             continue
         except ValueError:
-            log.warning("ValueError, WHILE SENDING droplet.'{}', TRYING AGAIN".format(command))
+            log.warning("ValueError, WHILE SENDING {!s}.{}(), TRYING AGAIN".format(obj, method))
             time.sleep(5)
             continue
         except Exception:
-            log.error("Unknown Error, WHILE SENDING droplet.'{}', TRYING AGAIN".format(command))
+            log.error("Unknown Error, WHILE SENDING {!s}.{}(), TRYING AGAIN".format(obj, method))
             time.sleep(5)
             continue
         else:
             return command_output
-    log.critical("NEVER RETURNED, WHILE SENDING droplet.'{}'".format(command))
+    log.critical("NEVER RETURNED, WHILE SENDING {!s}.{}(), TRYING AGAIN".format(obj, method))
     sys.exit(1)
 
 
 def turn_it_off(droplet: digitalocean.Droplet) -> bool:
     log.info("Shutting Down : {!s}".format(droplet))
     # send shutdown and capture that action's id
-    shut_id = send_command(droplet, "shutdown")["action"]["id"]
+    shut_action_id = send_command(5, droplet, "shutdown")["action"]["id"]
     # print("shut_command: ", shut_command)
-    shut_action = send_command(droplet, "get_action", [shut_id])
+    shut_action = send_command(5, droplet, "get_action", [shut_action_id])
 
     log.debug("shut_action {!s} {!s}".format(shut_action, type(shut_action)))
     shut_outcome = wait_for_action(shut_action, 3)
@@ -286,7 +286,7 @@ def turn_it_off(droplet: digitalocean.Droplet) -> bool:
     if shut_outcome:
         for i in range(50):
             time.sleep(3)
-            droplet.load()  # refresh droplet data
+            send_command(5, droplet, "load")  # refresh droplet data, retry 5 times
             log.debug("droplet.status {} i== {!s}".format(droplet.status, i))
             if droplet.status == "off":
                 log.info("Shutdown Completed " + str(droplet))
@@ -314,10 +314,11 @@ def start_backup(droplet: digitalocean.Droplet, keep: bool) -> digitalocean.Acti
         log.info("The Droplet Is Already Off : " + str(droplet) + " Taking Snapshot")
     else:
         log.error("'droplet.status' SHOULD BE EITHER 'off' OR 'active'")
-    # power_off is hard power off dont want that
     log.info("Taking snapshot of " + droplet.name)
-    snap = droplet.take_snapshot(snap_name, power_off=False)
-    snap_action = droplet.get_action(snap["action"]["id"])
+    # power_off is hard power off dont want that
+    snap_action_id = send_command(5, droplet, "take_snapshot", [snap_name, "power_off=False"])["action"]["id"]
+    # snap_action = droplet.get_action(snap["action"]["id"])
+    snap_action = send_command(5, droplet, "get_action", [snap_action_id])
     return snap_action
 
 
@@ -333,8 +334,8 @@ def snap_completed(snap_action: digitalocean.Action) -> bool:
 
 def turn_it_on(droplet: digitalocean.Droplet) -> bool:
     log.info("Powering Up {!s}".format(droplet))
-    power_up_id = send_command(droplet, "power_on")["action"]["id"]
-    power_up_action = send_command(droplet, "get_action", [power_up_id])
+    power_up_action_id = send_command(5, droplet, "power_on")["action"]["id"]
+    power_up_action = send_command(5, droplet, "get_action", [power_up_action_id])
     log.debug("power_up_action " + str(power_up_action) + str(type(power_up_action)))
     power_up_outcome = wait_for_action(power_up_action, 3)
     log.debug("power_up_outcome " + str(power_up_outcome))
@@ -357,7 +358,7 @@ def find_old_backups(manager: digitalocean.Manager, older_than: int) -> List[dig
     old_snapshots = []
     last_backup_to_keep = datetime.datetime.now() - datetime.timedelta(days=older_than)
 
-    for each_snapshot in manager.get_droplet_snapshots():
+    for each_snapshot in send_command(5, manager, "get_droplet_snapshots"):
         # print(each_snapshot.name, each_snapshot.created_at, each_snapshot.id)
         if "--dobackup--" in each_snapshot.name:
             backed_on = each_snapshot.name[each_snapshot.name.find("--dobackup--") + 12:]
@@ -372,7 +373,7 @@ def find_old_backups(manager: digitalocean.Manager, older_than: int) -> List[dig
 
 def delete_snapshot(each_snapshot: digitalocean.Snapshot) -> None:
     log.warning("Deleting Snapshot : " + str(each_snapshot))
-    destroyed = each_snapshot.destroy()
+    destroyed = send_command(5, each_snapshot, "destroy")
     if destroyed:
         log.info("Successfully Destroyed The Snapshot")
     else:
@@ -422,6 +423,7 @@ def list_snapshots(manager: digitalocean.Manager) -> None:
 
 def set_manager(do_token: str) -> digitalocean.Manager:
     manager = digitalocean.Manager(token=do_token)
+    # manager = send_command(3, digitalocean, "Manager", ["token=do_token"]) # wont work cause not list
     return manager
 
 
@@ -448,7 +450,7 @@ def list_all_tags(manager: digitalocean.Manager) -> None:
 
 
 def find_droplet(droplet_str: str, manager: digitalocean.Manager) -> digitalocean.Droplet:
-    all_droplets = manager.get_all_droplets()
+    all_droplets = send_command(5, manager, "get_all_droplets")
     for drop in all_droplets:
         log.debug(str(type(drop)) + str(drop))
         if drop.name == droplet_str:
@@ -465,18 +467,19 @@ def find_snapshot(
     snap_id_or_name: str, manager: digitalocean.Manager, do_token: str, droplet_id=000000
 ) -> digitalocean.Snapshot:
     snap_id_or_name = str(snap_id_or_name)  # for comparisions
-    for snap in manager.get_all_snapshots():
+    for snap in send_command(5, manager, "get_all_snapshots"):
         # print(type(snap.resource_id), type(droplet_id))
         if droplet_id == 000000:  # meaning, doesn't matter
             if snap_id_or_name == str(snap.id) or snap_id_or_name == snap.name:
-                snap_obj = digitalocean.Snapshot.get_object(do_token, snap.id)
+                # snap_obj = digitalocean.Snapshot.get_object(do_token, snap.id)
+                snap_obj = send_command(5, digitalocean.Snapshot, "get_object", [do_token, snap.id])
                 log.info("snap id and name {!s} {!s}".format(snap.id, snap.name))
                 return snap_obj
         # to filter snapshots for a specific droplet
         elif droplet_id == int(snap.resource_id):
             log.info("snap id and name {!s} {!s}".format(snap.id, snap.name))
             if snap_id_or_name == str(snap.id) or snap_id_or_name == snap.name:
-                snap_obj = digitalocean.Snapshot.get_object(do_token, snap.id)
+                snap_obj = send_command(5, digitalocean.Snapshot, "get_object", [do_token, snap.id])
                 return snap_obj
     if droplet_id == 000000:
         log.error("NO SNAPSHOT FOUND WITH NAME OR ID OF {!s}, EXITING".format(snap_id_or_name))
@@ -512,9 +515,8 @@ def restore_droplet(
         confirmation = input("Are You Sure You Want To Restore ? (if so, type 'yes') ")
         if confirmation.lower() == "yes":
             log.info("Starting Restore Process")
-            restore_act = droplet.get_action(
-                droplet.restore(int(snap.id))["action"]["id"]
-            )  # return action
+            restore_act_id = send_command(5, droplet, "restore", [(int(snap.id))])["action"]["id"]
+            restore_act = send_command(5, droplet, "get_action", [restore_act_id])
             restore_outcome = wait_for_action(restore_act, 10)
             if restore_outcome:
                 log.info(str(restore_act) + " Restore Completed")
@@ -601,7 +603,8 @@ def run(
                 log.info("No Snapshot Is Old Enough To be Deleted")
         if delete_snap:
             snap = find_snapshot(delete_snap, manager, do_token)
-            delete_snapshot(snap)
+            if snap:
+                delete_snapshot(snap)
         if list_older_than or list_older_than == 0:
             old_backups = find_old_backups(manager, list_older_than)
             log.info(
