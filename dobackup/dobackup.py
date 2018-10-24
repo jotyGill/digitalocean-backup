@@ -235,7 +235,6 @@ def send_command(
     # create dynamic function to run 'method' str as method
     # func = send_command(droplet, 'shutdown'), then func() == droplet.shutdown()
     run_command = getattr(obj, method)
-    print("EXECUTING COMMAND {!s}.{}()".format(obj, method))
     for attempt in range(retries):
         try:
             command_output = run_command(*method_args)
