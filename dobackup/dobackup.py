@@ -400,7 +400,7 @@ def do_untag_droplet(do_token: str, droplet_id: str, tag_name: str) -> bool:
     backup_tag = send_command(5, digitalocean, "Tag", [{"token": do_token, "name": tag_name}])
     try:
         # backup_tag.remove_droplets([droplet_id])
-        send_command(5, backup_tag, "remove", [droplet_id])
+        send_command(5, backup_tag, "remove_droplets", [[droplet_id]])
         return True
     except digitalocean.baseapi.NotFoundError:
         log.error("THE GIVEN TAG DOES NOT EXIST")
