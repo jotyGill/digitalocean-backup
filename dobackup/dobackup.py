@@ -235,9 +235,18 @@ def send_command(
     # create dynamic function to run 'method' str as method
     # func = send_command(droplet, 'shutdown'), then func() == droplet.shutdown()
     run_command = getattr(obj, method)
-    for attempt in range(retries):
+    log.debug("EXECUTING COMMAND {!s}.{}()".format(obj, method))
+
+    for i in range(retries):
         try:
-            command_output = run_command(*method_args)
+            if method_args:
+                # if args are dict [{pram1:arg1, pram2:arg2}]
+                if type(method_args[0]) is dict:
+                    command_output = run_command(**method_args[0])
+                else:
+                    command_output = run_command(*method_args)
+            else:
+                command_output = run_command()  # here run_command(*method_args) works as well
         except json.decoder.JSONDecodeError:
             log.warning(
                 "json.decoder.JSONDecodeError WHILE SENDING {!s}.{}(), TRYING AGAIN".format(obj, method))
@@ -380,15 +389,18 @@ def delete_snapshot(each_snapshot: digitalocean.Snapshot) -> None:
 
 
 def do_tag_droplet(do_token: str, droplet_id: str, tag_name: str) -> None:
-    backup_tag = digitalocean.Tag(token=do_token, name=tag_name)
+    # backup_tag = digitalocean.Tag(token=do_token, name=tag_name)
+    backup_tag = send_command(5, digitalocean, "Tag", [{"token": do_token, "name": tag_name}])
     backup_tag.create()  # create tag if not already created
     backup_tag.add_droplets([droplet_id])
 
 
 def do_untag_droplet(do_token: str, droplet_id: str, tag_name: str) -> bool:
-    backup_tag = digitalocean.Tag(token=do_token, name=tag_name)
+    # backup_tag = digitalocean.Tag(token=do_token, name=tag_name)
+    backup_tag = send_command(5, digitalocean, "Tag", [{"token": do_token, "name": tag_name}])
     try:
-        backup_tag.remove_droplets([droplet_id])
+        # backup_tag.remove_droplets([droplet_id])
+        send_command(5, backup_tag, "remove", [droplet_id])
         return True
     except digitalocean.baseapi.NotFoundError:
         log.error("THE GIVEN TAG DOES NOT EXIST")
@@ -396,7 +408,8 @@ def do_untag_droplet(do_token: str, droplet_id: str, tag_name: str) -> bool:
 
 
 def list_all_droplets(manager: digitalocean.Manager) -> None:
-    my_droplets = manager.get_all_droplets()
+    # my_droplets = manager.get_all_droplets()
+    my_droplets = send_command(5, manager, "get_all_droplets")
     log.info("Listing All Droplets:  ")
     log.info("<droplet-id>   <droplet-name>   <droplet-status>      <ip-addr>       <memory>\n")
     for droplet in my_droplets:
@@ -409,20 +422,22 @@ def list_all_droplets(manager: digitalocean.Manager) -> None:
 
 
 def get_tagged(manager: digitalocean.Manager, tag_name: str) -> None:
-    tagged_droplets = manager.get_all_droplets(tag_name=tag_name)
+    # tagged_droplets = manager.get_all_droplets(tag_name=tag_name)
+    tagged_droplets = send_command(5, manager, "get_all_droplets", [{"tag_name": tag_name}])
     return tagged_droplets
 
 
 def list_snapshots(manager: digitalocean.Manager) -> None:
     log.info("All Available Snapshots Are : <snapshot-name>          <snapshot-id>\n")
-    snapshots = [[snap.name, snap.id] for snap in manager.get_all_snapshots()]
+    # snapshots = [[snap.name, snap.id] for snap in manager.get_all_snapshots()]
+    snapshots = [[snap.name, snap.id] for snap in send_command(5, manager, "get_all_snapshots")]
     snapshots.sort()
     [log.info(snap[0].ljust(70) + snap[1]) for snap in snapshots]
 
 
 def set_manager(do_token: str) -> digitalocean.Manager:
-    manager = digitalocean.Manager(token=do_token)
-    # manager = send_command(3, digitalocean, "Manager", ["token=do_token"]) # wont work cause not list
+    # manager = digitalocean.Manager(token=do_token)
+    manager = send_command(5, digitalocean, "Manager", [{"token": do_token}])
     return manager
 
 
@@ -442,7 +457,8 @@ def get_token(token_id: int) -> str:
 
 
 def list_all_tags(manager: digitalocean.Manager) -> None:
-    all_tags = manager.get_all_tags()
+    # all_tags = manager.get_all_tags()
+    all_tags = send_command(5, manager, "get_all_tags")
     log.info("All Available Tags Are : ")
     for tag in all_tags:
         log.info(tag.name)
@@ -493,7 +509,7 @@ def find_snapshot(
 def list_taken_backups(manager: digitalocean.Manager) -> None:
     log.info("The Backups Taken With dobackup Are : <snapshot-name>     <snapshot-id>\n")
     backups = []
-    for snap in manager.get_all_snapshots():
+    for snap in send_command(5, manager, "get_all_snapshots"):
         if "--dobackup--" in snap.name or "--dobackup-keep--" in snap.name:
             backups.append([snap.name, snap.id])
 
@@ -629,14 +645,14 @@ def run(
 
             if tagged_droplets:  # doplets found with the --tag-name
                 for drop in tagged_droplets:
-                    droplet = manager.get_droplet(drop.id)
+                    droplet = send_command(5, manager, "get_droplet", [drop.id])
                     snap_action = start_backup(droplet, keep)
                     snap_and_drop_ids.append({"snap_action": snap_action, "droplet_id": droplet.id})
                 log.info("Backups Started, snap_and_drop_ids: {!s}".format(snap_and_drop_ids))
                 for snap_id_pair in snap_and_drop_ids:
                     snap_done = snap_completed(snap_id_pair["snap_action"])
                     # print("snap_action and droplet_id", snap_id_pair)
-                    turn_it_on(manager.get_droplet(snap_id_pair["droplet_id"]))
+                    turn_it_on(send_command(5, manager, "get_droplet", [(snap_id_pair["droplet_id"])]))
                     if not snap_done:
                         log.error("SNAPSHOT FAILED {!s} {!s}".format(snap_action, droplet))
             else:  # no doplets with the --tag-name
