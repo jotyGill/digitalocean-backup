@@ -3,6 +3,7 @@ token*
 test*
 *.log
 *.log*
+.coverage
 
 __pycache__
 dobackup.egg*
