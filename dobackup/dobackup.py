@@ -623,7 +623,7 @@ def run(
         if list_older_than or list_older_than == 0:
             old_backups = find_old_backups(manager, list_older_than)
             log.info(
-                "Snapshots Older Than {!s} Days, With '--dobackup--' or '--dobackup-keep--'"
+                "Snapshots Older Than {!s} Days, With '--dobackup--' "
                 "In Their Name Are : \n".format(list_older_than)
             )
             [log.info(str(x)) for x in old_backups]
