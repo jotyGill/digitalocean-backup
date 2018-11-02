@@ -230,7 +230,7 @@ def wait_for_action(an_action: digitalocean.Action, check_freq: int) -> bool:
 
 
 def send_command(
-        retries: int, obj: Any, method: str, method_args: List = []) -> Any:
+        retries: int, obj: Any, method: str, *args, **kwargs) -> Any:
 
     # create dynamic function to run 'method' str as method
     # func = send_command(droplet, 'shutdown'), then func() == droplet.shutdown()
@@ -239,14 +239,8 @@ def send_command(
 
     for i in range(retries):
         try:
-            if method_args:
-                # if args are dict [{pram1:arg1, pram2:arg2}]
-                if type(method_args[0]) is dict:
-                    command_output = run_command(**method_args[0])
-                else:
-                    command_output = run_command(*method_args)
-            else:
-                command_output = run_command()  # here run_command(*method_args) works as well
+            # pass the args and kwargs through and run it
+            command_output = run_command(*args, **kwargs)
         except json.decoder.JSONDecodeError:
             log.warning(
                 "json.decoder.JSONDecodeError WHILE SENDING {!s}.{}(), TRYING AGAIN".format(obj, method))
@@ -286,7 +280,7 @@ def turn_it_off(droplet: digitalocean.Droplet) -> bool:
     # send shutdown and capture that action's id
     shut_action_id = send_command(5, droplet, "shutdown")["action"]["id"]
     # print("shut_command: ", shut_command)
-    shut_action = send_command(5, droplet, "get_action", [shut_action_id])
+    shut_action = send_command(5, droplet, "get_action", shut_action_id)
 
     log.debug("shut_action {!s} {!s}".format(shut_action, type(shut_action)))
     shut_outcome = wait_for_action(shut_action, 3)
@@ -324,9 +318,9 @@ def start_backup(droplet: digitalocean.Droplet, keep: bool) -> digitalocean.Acti
         log.error("'droplet.status' SHOULD BE EITHER 'off' OR 'active'")
     log.info("Taking snapshot of " + droplet.name)
     # power_off is hard power off dont want that
-    snap_action_id = send_command(5, droplet, "take_snapshot", [snap_name, "power_off=False"])["action"]["id"]
+    snap_action_id = send_command(5, droplet, "take_snapshot", snap_name, power_off=False)["action"]["id"]
     # snap_action = droplet.get_action(snap["action"]["id"])
-    snap_action = send_command(5, droplet, "get_action", [snap_action_id])
+    snap_action = send_command(5, droplet, "get_action", snap_action_id)
     return snap_action
 
 
@@ -343,7 +337,7 @@ def snap_completed(snap_action: digitalocean.Action) -> bool:
 def turn_it_on(droplet: digitalocean.Droplet) -> bool:
     log.info("Powering Up {!s}".format(droplet))
     power_up_action_id = send_command(5, droplet, "power_on")["action"]["id"]
-    power_up_action = send_command(5, droplet, "get_action", [power_up_action_id])
+    power_up_action = send_command(5, droplet, "get_action", power_up_action_id)
     log.debug("power_up_action " + str(power_up_action) + str(type(power_up_action)))
     power_up_outcome = wait_for_action(power_up_action, 3)
     log.debug("power_up_outcome " + str(power_up_outcome))
@@ -390,17 +384,17 @@ def delete_snapshot(each_snapshot: digitalocean.Snapshot) -> None:
 
 def do_tag_droplet(do_token: str, droplet_id: str, tag_name: str) -> None:
     # backup_tag = digitalocean.Tag(token=do_token, name=tag_name)
-    backup_tag = send_command(5, digitalocean, "Tag", [{"token": do_token, "name": tag_name}])
+    backup_tag = send_command(5, digitalocean, "Tag", token=do_token, name=tag_name)
     backup_tag.create()  # create tag if not already created
     backup_tag.add_droplets([droplet_id])
 
 
 def do_untag_droplet(do_token: str, droplet_id: str, tag_name: str) -> bool:
     # backup_tag = digitalocean.Tag(token=do_token, name=tag_name)
-    backup_tag = send_command(5, digitalocean, "Tag", [{"token": do_token, "name": tag_name}])
+    backup_tag = send_command(5, digitalocean, "Tag", token=do_token, name=tag_name)
     try:
         # backup_tag.remove_droplets([droplet_id])
-        send_command(5, backup_tag, "remove_droplets", [[droplet_id]])
+        send_command(5, backup_tag, "remove_droplets", [droplet_id])
         return True
     except digitalocean.baseapi.NotFoundError:
         log.error("THE GIVEN TAG DOES NOT EXIST")
@@ -423,7 +417,7 @@ def list_all_droplets(manager: digitalocean.Manager) -> None:
 
 def get_tagged(manager: digitalocean.Manager, tag_name: str) -> None:
     # tagged_droplets = manager.get_all_droplets(tag_name=tag_name)
-    tagged_droplets = send_command(5, manager, "get_all_droplets", [{"tag_name": tag_name}])
+    tagged_droplets = send_command(5, manager, "get_all_droplets", tag_name=tag_name)
     return tagged_droplets
 
 
@@ -437,7 +431,7 @@ def list_snapshots(manager: digitalocean.Manager) -> None:
 
 def set_manager(do_token: str) -> digitalocean.Manager:
     # manager = digitalocean.Manager(token=do_token)
-    manager = send_command(5, digitalocean, "Manager", [{"token": do_token}])
+    manager = send_command(5, digitalocean, "Manager", token=do_token)
     return manager
 
 
@@ -487,14 +481,14 @@ def find_snapshot(
         if droplet_id == 000000:  # meaning, doesn't matter
             if snap_id_or_name == str(snap.id) or snap_id_or_name == snap.name:
                 # snap_obj = digitalocean.Snapshot.get_object(do_token, snap.id)
-                snap_obj = send_command(5, digitalocean.Snapshot, "get_object", [do_token, snap.id])
+                snap_obj = send_command(5, digitalocean.Snapshot, "get_object", do_token, snap.id)
                 log.info("snap id and name {!s} {!s}".format(snap.id, snap.name))
                 return snap_obj
         # to filter snapshots for a specific droplet
         elif droplet_id == int(snap.resource_id):
             log.info("snap id and name {!s} {!s}".format(snap.id, snap.name))
             if snap_id_or_name == str(snap.id) or snap_id_or_name == snap.name:
-                snap_obj = send_command(5, digitalocean.Snapshot, "get_object", [do_token, snap.id])
+                snap_obj = send_command(5, digitalocean.Snapshot, "get_object", do_token, snap.id)
                 return snap_obj
     if droplet_id == 000000:
         log.error("NO SNAPSHOT FOUND WITH NAME OR ID OF {!s}, EXITING".format(snap_id_or_name))
@@ -530,8 +524,8 @@ def restore_droplet(
         confirmation = input("Are You Sure You Want To Restore ? (if so, type 'yes') ")
         if confirmation.lower() == "yes":
             log.info("Starting Restore Process")
-            restore_act_id = send_command(5, droplet, "restore", [(int(snap.id))])["action"]["id"]
-            restore_act = send_command(5, droplet, "get_action", [restore_act_id])
+            restore_act_id = send_command(5, droplet, "restore", (int(snap.id)))["action"]["id"]
+            restore_act = send_command(5, droplet, "get_action", restore_act_id)
             restore_outcome = wait_for_action(restore_act, 10)
             if restore_outcome:
                 log.info(str(restore_act) + " Restore Completed")
@@ -645,14 +639,14 @@ def run(
 
             if tagged_droplets:  # doplets found with the --tag-name
                 for drop in tagged_droplets:
-                    droplet = send_command(5, manager, "get_droplet", [drop.id])
+                    droplet = send_command(5, manager, "get_droplet", drop.id)
                     snap_action = start_backup(droplet, keep)
                     snap_and_drop_ids.append({"snap_action": snap_action, "droplet_id": droplet.id})
                 log.info("Backups Started, snap_and_drop_ids: {!s}".format(snap_and_drop_ids))
                 for snap_id_pair in snap_and_drop_ids:
                     snap_done = snap_completed(snap_id_pair["snap_action"])
                     # print("snap_action and droplet_id", snap_id_pair)
-                    turn_it_on(send_command(5, manager, "get_droplet", [(snap_id_pair["droplet_id"])]))
+                    turn_it_on(send_command(5, manager, "get_droplet", (snap_id_pair["droplet_id"])))
                     if not snap_done:
                         log.error("SNAPSHOT FAILED {!s} {!s}".format(snap_action, droplet))
             else:  # no doplets with the --tag-name
