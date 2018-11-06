@@ -1,6 +1,6 @@
 .token*
 token*
-test*
+htmlcov
 *.log
 *.log*
 .coverage
