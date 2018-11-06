@@ -5,8 +5,8 @@ Simple Automated offline snapshots of digitalocean droplets utilising [python-di
 The script safely shutdowns a given droplet or all droplets with a give tag then performs snapshots of them, Then
 it turns them back on. Every step is logged as well as displayed in the console output.
 The script is designed to be used as a cron job as well. If any error occurs the script logs it then exits with
-exit code of 1. Very useful feature to ensure that the backups successfully completed. I use it to delete older
-backup only if new one is successful and to use a 'healthcheck' service to get notified if a backup failed.
+exit code of 1. Very useful feature to ensure that the backups are successfully completed. I use it to delete older
+backups only if new one is successful and to use a 'healthchecks' service to get notified if a backup failed.
 (see cron examples)
 
 ## Installation
