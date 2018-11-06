@@ -302,10 +302,10 @@ def turn_it_off(droplet: digitalocean.Droplet) -> bool:
         return False
 
 
-def start_backup(droplet: digitalocean.Droplet, keep: bool) -> digitalocean.Action:
-    backup_str = "--dobackup--"
+def start_backup(droplet: digitalocean.Droplet, keep: bool, tag_name: str) -> digitalocean.Action:
+    backup_str = "--" + tag_name + "--"
     if keep:
-        backup_str = "--dobackup-keep--"
+        backup_str = "--" + tag_name + "-keep--"
     snap_name = (
         droplet.name + backup_str + str(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
     )
@@ -356,14 +356,15 @@ def turn_it_on(droplet: digitalocean.Droplet) -> bool:
     return False
 
 
-def find_old_backups(manager: digitalocean.Manager, older_than: int) -> List[digitalocean.Snapshot]:
+def find_old_backups(manager: digitalocean.Manager, older_than: int, tag_name: str) -> List[digitalocean.Snapshot]:
     old_snapshots = []
+    tag_str = "--" + tag_name + "--"
     last_backup_to_keep = datetime.datetime.now() - datetime.timedelta(days=older_than)
 
     for each_snapshot in send_command(5, manager, "get_droplet_snapshots"):
         # print(each_snapshot.name, each_snapshot.created_at, each_snapshot.id)
-        if "--dobackup--" in each_snapshot.name:
-            backed_on = each_snapshot.name[each_snapshot.name.find("--dobackup--") + 12:]
+        if tag_str in each_snapshot.name:
+            backed_on = each_snapshot.name[each_snapshot.name.find(tag_str) + len(tag_str):]
             # print("backed_on", backed_on)
             backed_on_date = datetime.datetime.strptime(backed_on, "%Y-%m-%d %H:%M:%S")
             if backed_on_date < last_backup_to_keep:
@@ -408,10 +409,10 @@ def list_all_droplets(manager: digitalocean.Manager) -> None:
     log.info("<droplet-id>   <droplet-name>   <droplet-status>      <ip-addr>       <memory>\n")
     for droplet in my_droplets:
         log.info(
-            str(droplet).ljust(40)
-            + droplet.status.ljust(12)
-            + droplet.ip_address.ljust(22)
-            + str(droplet.memory)
+            str(droplet).ljust(40) +
+            droplet.status.ljust(12) +
+            droplet.ip_address.ljust(22) +
+            str(droplet.memory)
         )
 
 
@@ -500,11 +501,15 @@ def find_snapshot(
         )
 
 
-def list_taken_backups(manager: digitalocean.Manager) -> None:
-    log.info("The Backups Taken With dobackup Are : <snapshot-name>     <snapshot-id>\n")
+def list_taken_backups(manager: digitalocean.Manager, tag_name: str) -> None:
+    tag_str = "--" + tag_name + "--"
+    tag_str_keep = "--" + tag_name + "-keep--"
+    log.info(
+        "The Backups Taken With dobackup using tag '{}' Are : <snapshot-name>\
+        <snapshot-id>\n".format(tag_name))
     backups = []
     for snap in send_command(5, manager, "get_all_snapshots"):
-        if "--dobackup--" in snap.name or "--dobackup-keep--" in snap.name:
+        if tag_str in snap.name or tag_str_keep in snap.name:
             backups.append([snap.name, snap.id])
 
     backups.sort()
@@ -573,7 +578,7 @@ def run(
         if list_droplets:
             list_all_droplets(manager)
         if list_backups:
-            list_taken_backups(manager)
+            list_taken_backups(manager, tag_name)
         if list_snaps:
             list_snapshots(manager)
         if list_tagged:
@@ -600,10 +605,10 @@ def run(
             log.info("Now, droplets tagged with : " + tag_name + " are :")
             log.info(tagged_droplets)
         if delete_older_than or delete_older_than == 0:  # even accept value 0
-            old_backups = find_old_backups(manager, delete_older_than)
+            old_backups = find_old_backups(manager, delete_older_than, tag_name)
             log.info(
-                "Snapshots Older Than {} Days, With '--dobackup--' In Their Name Are :"
-                " \n".format(delete_older_than)
+                "Snapshots Older Than {} Days, With '--{}--' In Their Name Are :"
+                " \n".format(delete_older_than, tag_name)
             )
             [log.info(str(x)) for x in old_backups]
             if old_backups:  # not an empty list
@@ -615,10 +620,10 @@ def run(
             if snap:
                 delete_snapshot(snap)
         if list_older_than or list_older_than == 0:
-            old_backups = find_old_backups(manager, list_older_than)
+            old_backups = find_old_backups(manager, list_older_than, tag_name)
             log.info(
-                "Snapshots Older Than {!s} Days, With '--dobackup--' "
-                "In Their Name Are : \n".format(list_older_than)
+                "Snapshots Older Than {!s} Days, With '--{}--' "
+                "In Their Name Are : \n".format(list_older_than, tag_name)
             )
             [log.info(str(x)) for x in old_backups]
         if backup:
@@ -626,7 +631,7 @@ def run(
             if droplet is None:
                 return 1
             original_status = droplet.status  # active or off
-            snap_action = start_backup(droplet, keep)
+            snap_action = start_backup(droplet, keep, tag_name)
             snap_done = snap_completed(snap_action)
             if original_status != "off":
                 turn_it_on(droplet)
@@ -640,13 +645,16 @@ def run(
             if tagged_droplets:  # doplets found with the --tag-name
                 for drop in tagged_droplets:
                     droplet = send_command(5, manager, "get_droplet", drop.id)
-                    snap_action = start_backup(droplet, keep)
-                    snap_and_drop_ids.append({"snap_action": snap_action, "droplet_id": droplet.id})
+                    original_status = droplet.status  # active or off
+                    snap_action = start_backup(droplet, keep, tag_name)
+                    snap_and_drop_ids.append(
+                        {"snap_action": snap_action, "droplet_id": droplet.id, "status": original_status})
                 log.info("Backups Started, snap_and_drop_ids: {!s}".format(snap_and_drop_ids))
                 for snap_id_pair in snap_and_drop_ids:
                     snap_done = snap_completed(snap_id_pair["snap_action"])
                     # print("snap_action and droplet_id", snap_id_pair)
-                    turn_it_on(send_command(5, manager, "get_droplet", (snap_id_pair["droplet_id"])))
+                    if snap_id_pair["status"] != "off":
+                        turn_it_on(send_command(5, manager, "get_droplet", (snap_id_pair["droplet_id"])))
                     if not snap_done:
                         log.error("SNAPSHOT FAILED {!s} {!s}".format(snap_action, droplet))
             else:  # no doplets with the --tag-name
