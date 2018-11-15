@@ -62,6 +62,11 @@ To tag a server with 'web-servers' tag.
 ``` bash
 dobackup --tag-server ubuntu-18-04  --tag-name web-servers
 ```
+NOTE: In 2.0, --'tag-name'-- is appended to the backup name, instead of hardcoded str '--dobackup--'.
+The default value of tag_name is still 'dobackup'. Now we can use --tag-name along with --list-backups, --list-older-than,
+--delete-older-than. Now we can keep the backups of droplets with lets say 'tag1' for 5 days and 'tag2' for 10 days.
+example command. "--delete-older-than 5 --tag-name 'tag1'" ,   "--delete-older-than 10 --tag-name 'tag2'"
+
 
 ### Perform Backups
 To backup a server using it's name or id.
