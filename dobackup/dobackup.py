@@ -409,10 +409,10 @@ def list_all_droplets(manager: digitalocean.Manager) -> None:
     log.info("<droplet-id>   <droplet-name>   <droplet-status>      <ip-addr>       <memory>\n")
     for droplet in my_droplets:
         log.info(
-            str(droplet).ljust(40) +
-            droplet.status.ljust(12) +
-            droplet.ip_address.ljust(22) +
-            str(droplet.memory)
+            str(droplet).ljust(40)
+            + droplet.status.ljust(12)
+            + droplet.ip_address.ljust(22)
+            + str(droplet.memory)
         )
 
 
@@ -483,11 +483,11 @@ def find_snapshot(
             if snap_id_or_name == str(snap.id) or snap_id_or_name == snap.name:
                 # snap_obj = digitalocean.Snapshot.get_object(do_token, snap.id)
                 snap_obj = send_command(5, digitalocean.Snapshot, "get_object", do_token, snap.id)
-                log.info("snap id and name {!s} {!s}".format(snap.id, snap.name))
+                # log.info("snap id and name {!s} {!s}".format(snap.id, snap.name))
                 return snap_obj
         # to filter snapshots for a specific droplet
         elif droplet_id == int(snap.resource_id):
-            log.info("snap id and name {!s} {!s}".format(snap.id, snap.name))
+            # log.info("snap id and name {!s} {!s}".format(snap.id, snap.name))
             if snap_id_or_name == str(snap.id) or snap_id_or_name == snap.name:
                 snap_obj = send_command(5, digitalocean.Snapshot, "get_object", do_token, snap.id)
                 return snap_obj
@@ -648,12 +648,12 @@ def run(
                     original_status = droplet.status  # active or off
                     snap_action = start_backup(droplet, keep, tag_name)
                     snap_and_drop_ids.append(
-                        {"snap_action": snap_action, "droplet_id": droplet.id, "status": original_status})
+                        {"snap_action": snap_action, "droplet_id": droplet.id, "original_status": original_status})
                 log.info("Backups Started, snap_and_drop_ids: {!s}".format(snap_and_drop_ids))
                 for snap_id_pair in snap_and_drop_ids:
                     snap_done = snap_completed(snap_id_pair["snap_action"])
                     # print("snap_action and droplet_id", snap_id_pair)
-                    if snap_id_pair["status"] != "off":
+                    if snap_id_pair["original_status"] != "off":
                         turn_it_on(send_command(5, manager, "get_droplet", (snap_id_pair["droplet_id"])))
                     if not snap_done:
                         log.error("SNAPSHOT FAILED {!s} {!s}".format(snap_action, droplet))
