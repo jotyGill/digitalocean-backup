@@ -17,9 +17,7 @@ from .__init__ import __basefilepath__, __version__
 logging.basicConfig(
     format="%(asctime)s [%(levelname)-5.5s]  %(message)s",
     handlers=[
-        logging.handlers.TimedRotatingFileHandler(
-            __basefilepath__ + "dobackup.log", when="W0", interval=2
-        ),
+        logging.handlers.TimedRotatingFileHandler(__basefilepath__ + "dobackup.log", when="W0", interval=2),
         logging.StreamHandler(sys.stdout),
     ],
     level="INFO",
@@ -28,9 +26,7 @@ log = logging.getLogger()
 
 
 def parse_args(argv: List[str]) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(
-        description="Automated offline snapshots of digitalocean droplets"
-    )
+    parser = argparse.ArgumentParser(description="Automated offline snapshots of digitalocean droplets")
     parser.add_argument(
         "token_id",
         nargs="?",
@@ -38,47 +34,26 @@ def parse_args(argv: List[str]) -> argparse.Namespace:
     you have multiple DO accounts",
         default=0,
     )
-    parser.add_argument(
-        "-v", "-V", "--version", action="version", version="dobackup " + __version__
-    )
-    parser.add_argument(
-        "--init", dest="init", help="Save token to .token file", action="store_true"
-    )
-    parser.add_argument(
-        "-l", "--list-droplets", dest="list_droplets", help="List all droplets", action="store_true"
-    )
+    parser.add_argument("-v", "-V", "--version", action="version", version="dobackup " + __version__)
+    parser.add_argument("--init", dest="init", help="Save token to .token file", action="store_true")
+    parser.add_argument("-l", "--list-droplets", dest="list_droplets", help="List all droplets", action="store_true")
     parser.add_argument(
         "--list-backups",
         dest="list_backups",
         help='List all snapshots with "dobackup" in their name',
         action="store_true",
     )
+    parser.add_argument("-s", "--list-snaps", dest="list_snaps", help="List all snapshots", action="store_true")
     parser.add_argument(
-        "-s", "--list-snaps", dest="list_snaps", help="List all snapshots", action="store_true"
+        "--list-tagged", dest="list_tagged", help='List droplets using "--tag-name"', action="store_true"
+    )
+    parser.add_argument("--list-tags", dest="list_tags", help="List all used tags", action="store_true")
+    parser.add_argument("--list-older-than", dest="list_older_than", type=int, help="List snaps older than, in days")
+    parser.add_argument(
+        "--tag-droplet", dest="tag_droplet", type=str, help="Add tag to the provided droplet name or id"
     )
     parser.add_argument(
-        "--list-tagged",
-        dest="list_tagged",
-        help='List droplets using "--tag-name"',
-        action="store_true",
-    )
-    parser.add_argument(
-        "--list-tags", dest="list_tags", help="List all used tags", action="store_true"
-    )
-    parser.add_argument(
-        "--list-older-than", dest="list_older_than", type=int, help="List snaps older than, in days"
-    )
-    parser.add_argument(
-        "--tag-droplet",
-        dest="tag_droplet",
-        type=str,
-        help="Add tag to the provided droplet name or id",
-    )
-    parser.add_argument(
-        "--untag-droplet",
-        dest="untag_droplet",
-        type=str,
-        help="Remove tag from the provided droplet name or id",
+        "--untag-droplet", dest="untag_droplet", type=str, help="Remove tag from the provided droplet name or id"
     )
     parser.add_argument(
         "--tag-name",
@@ -89,22 +64,11 @@ def parse_args(argv: List[str]) -> argparse.Namespace:
         default="dobackup",
     )
     parser.add_argument(
-        "--delete-older-than",
-        dest="delete_older_than",
-        type=int,
-        help="Delete backups older than, in days",
+        "--delete-older-than", dest="delete_older_than", type=int, help="Delete backups older than, in days"
     )
+    parser.add_argument("--delete-snap", dest="delete_snap", type=str, help="Delete the snapshot with given name or id")
     parser.add_argument(
-        "--delete-snap",
-        dest="delete_snap",
-        type=str,
-        help="Delete the snapshot with given name or id",
-    )
-    parser.add_argument(
-        "--backup",
-        dest="backup",
-        type=str,
-        help="Shutdown, Backup, Then Restart the droplet with given name or id",
+        "--backup", dest="backup", type=str, help="Shutdown, Backup, Then Restart the droplet with given name or id"
     )
     parser.add_argument(
         "--backup-all",
@@ -112,23 +76,13 @@ def parse_args(argv: List[str]) -> argparse.Namespace:
         help='Shutdown, Backup, Then Restart all droplets with "--tag-name"',
         action="store_true",
     )
+    parser.add_argument("--shutdown", dest="shutdown", type=str, help="Shutdown, the droplet with given name or id")
+    parser.add_argument("--powerup", dest="powerup", type=str, help="Powerup, the droplet with given name or id")
     parser.add_argument(
-        "--shutdown", dest="shutdown", type=str, help="Shutdown, the droplet with given name or id"
+        "--restore-droplet", dest="restore_drop", type=str, help="Restore, the droplet with given name or id"
     )
     parser.add_argument(
-        "--powerup", dest="powerup", type=str, help="Powerup, the droplet with given name or id"
-    )
-    parser.add_argument(
-        "--restore-droplet",
-        dest="restore_drop",
-        type=str,
-        help="Restore, the droplet with given name or id",
-    )
-    parser.add_argument(
-        "--restore-to",
-        dest="restore_to",
-        type=str,
-        help="Snapshot id or name, to restore the droplet to",
+        "--restore-to", dest="restore_to", type=str, help="Snapshot id or name, to restore the droplet to"
     )
     parser.add_argument(
         "--keep",
@@ -174,18 +128,14 @@ def install_zsh_completion() -> None:
     import os.path
     import shutil
 
-    if os.path.exists(
-        os.path.join(os.path.expanduser("~"), ".oh-my-zsh/custom/plugins/zsh-completions/src/")
-    ):
+    if os.path.exists(os.path.join(os.path.expanduser("~"), ".oh-my-zsh/custom/plugins/zsh-completions/src/")):
         log.info("Zsh-completions path exists, installing completions file '_dobackup'")
         shutil.copy(
             __basefilepath__ + "_dobackup",
             os.path.join(os.path.expanduser("~"), ".oh-my-zsh/custom/plugins/zsh-completions/src/"),
         )
     else:
-        log.info(
-            "Zsh-completions with oh-my-zsh is not installed, can't use auto completions, but that's ok"
-        )
+        log.info("Zsh-completions with oh-my-zsh is not installed, can't use auto completions, but that's ok")
 
 
 def wait_for_action(an_action: digitalocean.Action, check_freq: int) -> bool:
@@ -229,8 +179,7 @@ def wait_for_action(an_action: digitalocean.Action, check_freq: int) -> bool:
         return False
 
 
-def send_command(
-        retries: int, obj: Any, method: str, *args, **kwargs) -> Any:
+def send_command(retries: int, obj: Any, method: str, *args, **kwargs) -> Any:
 
     # create dynamic function to run 'method' str as method
     # func = send_command(droplet, 'shutdown'), then func() == droplet.shutdown()
@@ -242,23 +191,19 @@ def send_command(
             # pass the args and kwargs through and run it
             command_output = run_command(*args, **kwargs)
         except json.decoder.JSONDecodeError:
-            log.warning(
-                "json.decoder.JSONDecodeError WHILE SENDING {!s}.{}(), TRYING AGAIN".format(obj, method))
+            log.warning("json.decoder.JSONDecodeError WHILE SENDING {!s}.{}(), TRYING AGAIN".format(obj, method))
             time.sleep(5)
             continue
         except digitalocean.baseapi.JSONReadError:
-            log.warning(
-                "json.decoder.JSONReadError WHILE SENDING {!s}.{}(), TRYING AGAIN".format(obj, method))
+            log.warning("json.decoder.JSONReadError WHILE SENDING {!s}.{}(), TRYING AGAIN".format(obj, method))
             time.sleep(5)
             continue
         except digitalocean.baseapi.DataReadError:
-            log.warning(
-                "json.decoder.DataReadError WHILE SENDING {!s}.{}(), TRYING AGAIN".format(obj, method))
+            log.warning("json.decoder.DataReadError WHILE SENDING {!s}.{}(), TRYING AGAIN".format(obj, method))
             time.sleep(5)
             continue
         except digitalocean.baseapi.Error:
-            log.warning(
-                "digitalocean.baseapi.Error, WHILE SENDING {!s}.{}(), TRYING AGAIN".format(obj, method))
+            log.warning("digitalocean.baseapi.Error, WHILE SENDING {!s}.{}(), TRYING AGAIN".format(obj, method))
             time.sleep(5)
             continue
         except ValueError:
@@ -293,9 +238,7 @@ def turn_it_off(droplet: digitalocean.Droplet) -> bool:
             if droplet.status == "off":
                 log.info("Shutdown Completed " + str(droplet))
                 return True
-        log.error(
-            "SHUTDOWN FAILED, REPORTED 'shut_outcome'=='True' " + str(droplet) + str(shut_action)
-        )
+        log.error("SHUTDOWN FAILED, REPORTED 'shut_outcome'=='True' " + str(droplet) + str(shut_action))
         return False
     else:
         log.error("SHUTDOWN FAILED " + str(droplet) + str(shut_action))
@@ -306,9 +249,7 @@ def start_backup(droplet: digitalocean.Droplet, keep: bool, tag_name: str) -> di
     backup_str = "--" + tag_name + "--"
     if keep:
         backup_str = "--" + tag_name + "-keep--"
-    snap_name = (
-        droplet.name + backup_str + str(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
-    )
+    snap_name = droplet.name + backup_str + str(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
     # snap_name = droplet.name + "--dobackup--2018-05-02 12:37:52"
     if droplet.status == "active":
         turn_it_off(droplet)
@@ -364,7 +305,7 @@ def find_old_backups(manager: digitalocean.Manager, older_than: int, tag_name: s
     for each_snapshot in send_command(5, manager, "get_droplet_snapshots"):
         # print(each_snapshot.name, each_snapshot.created_at, each_snapshot.id)
         if tag_str in each_snapshot.name:
-            backed_on = each_snapshot.name[each_snapshot.name.find(tag_str) + len(tag_str):]
+            backed_on = each_snapshot.name[each_snapshot.name.find(tag_str) + len(tag_str) :]
             # print("backed_on", backed_on)
             backed_on_date = datetime.datetime.strptime(backed_on, "%Y-%m-%d %H:%M:%S")
             if backed_on_date < last_backup_to_keep:
@@ -408,12 +349,7 @@ def list_all_droplets(manager: digitalocean.Manager) -> None:
     log.info("Listing All Droplets:  ")
     log.info("<droplet-id>   <droplet-name>   <droplet-status>      <ip-addr>       <memory>\n")
     for droplet in my_droplets:
-        log.info(
-            str(droplet).ljust(40)
-            + droplet.status.ljust(12)
-            + droplet.ip_address.ljust(22)
-            + str(droplet.memory)
-        )
+        log.info(str(droplet).ljust(40) + droplet.status.ljust(12) + droplet.ip_address.ljust(22) + str(droplet.memory))
 
 
 def get_tagged(manager: digitalocean.Manager, tag_name: str) -> None:
@@ -495,9 +431,7 @@ def find_snapshot(
         log.error("NO SNAPSHOT FOUND WITH NAME OR ID OF {!s}, EXITING".format(snap_id_or_name))
     else:
         log.error(
-            "NO SNAPSHOT FOUND WITH NAME OR ID OF {!s} FOR DROPLET ID {!s}, EXITING".format(
-                snap_id_or_name, droplet_id
-            )
+            "NO SNAPSHOT FOUND WITH NAME OR ID OF {!s} FOR DROPLET ID {!s}, EXITING".format(snap_id_or_name, droplet_id)
         )
 
 
@@ -506,7 +440,10 @@ def list_taken_backups(manager: digitalocean.Manager, tag_name: str) -> None:
     tag_str_keep = "--" + tag_name + "-keep--"
     log.info(
         "The Backups Taken With dobackup using tag '{}' Are : <snapshot-name>\
-        <snapshot-id>\n".format(tag_name))
+        <snapshot-id>\n".format(
+            tag_name
+        )
+    )
     backups = []
     for snap in send_command(5, manager, "get_all_snapshots"):
         if tag_str in snap.name or tag_str_keep in snap.name:
@@ -517,10 +454,7 @@ def list_taken_backups(manager: digitalocean.Manager, tag_name: str) -> None:
 
 
 def restore_droplet(
-    droplet: digitalocean.Droplet,
-    snapshot: digitalocean.Snapshot,
-    manager: digitalocean.Manager,
-    do_token: str,
+    droplet: digitalocean.Droplet, snapshot: digitalocean.Snapshot, manager: digitalocean.Manager, do_token: str
 ):
     snap = find_snapshot(snapshot, manager, do_token, droplet_id=droplet.id)
 
@@ -648,7 +582,8 @@ def run(
                     original_status = droplet.status  # active or off
                     snap_action = start_backup(droplet, keep, tag_name)
                     snap_and_drop_ids.append(
-                        {"snap_action": snap_action, "droplet_id": droplet.id, "original_status": original_status})
+                        {"snap_action": snap_action, "droplet_id": droplet.id, "original_status": original_status}
+                    )
                 log.info("Backups Started, snap_and_drop_ids: {!s}".format(snap_and_drop_ids))
                 for snap_id_pair in snap_and_drop_ids:
                     snap_done = snap_completed(snap_id_pair["snap_action"])
@@ -676,10 +611,7 @@ def run(
                     return 1
                 restore_droplet(droplet, restore_to, manager, do_token)
             else:
-                log.warning(
-                    "Please Use '--restore-to' To Provide The id Of "
-                    "Snapshot To Restore This Droplet To"
-                )
+                log.warning("Please Use '--restore-to' To Provide The id Of " "Snapshot To Restore This Droplet To")
 
         log.info("---------------------------END----------------------------")
         log.info("\n\n")
