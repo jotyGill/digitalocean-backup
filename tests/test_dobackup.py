@@ -30,7 +30,7 @@ non_existing_snap_id = "99999999"
 
 
 def test_set_tokens(monkeypatch, do_token):
-    monkeypatch.setattr('builtins.input', lambda x: do_token)
+    monkeypatch.setattr("builtins.input", lambda x: do_token)
     dobackup.set_tokens()
     assert do_token == do_token
 
@@ -82,10 +82,10 @@ def test_find_snapshot(manager, do_token):
 
 
 def test_find_snapshot_wrong_id(manager, do_token):
-    with mock.patch('dobackup.dobackup.sys.exit') as exit_mock:
-        snap_obj = dobackup.find_snapshot(
-            non_existing_snap_id, manager, do_token, droplet_id=000000)
+    with mock.patch("dobackup.dobackup.sys.exit") as exit_mock:
+        snap_obj = dobackup.find_snapshot(non_existing_snap_id, manager, do_token, droplet_id=000000)
         assert snap_obj is None
+
 
 # To handle sys.exit in code
 # def test_tag_droplet_wrong_id(manager, do_token):
@@ -96,12 +96,12 @@ def test_find_snapshot_wrong_id(manager, do_token):
 
 
 def test_tag_droplet_wrong_id():
-    with mock.patch('sys.argv', ['dobackup', '--tag-droplet', non_existing_droplet_id]):
+    with mock.patch("sys.argv", ["dobackup", "--tag-droplet", non_existing_droplet_id]):
         assert dobackup.main() == 1
 
 
 def test_untag_droplet_wrong_id():
-    with mock.patch('sys.argv', ['dobackup', '--untag-droplet', non_existing_droplet_id]):
+    with mock.patch("sys.argv", ["dobackup", "--untag-droplet", non_existing_droplet_id]):
         assert dobackup.main() == 1
 
 
@@ -129,30 +129,30 @@ def test_delete_snap_wrong_id2(caplog, manager, do_token):
 
 
 def test_backup_drop_wrong_id():
-    with mock.patch('sys.argv', ['dobackup', '--backup', non_existing_droplet_id]):
+    with mock.patch("sys.argv", ["dobackup", "--backup", non_existing_droplet_id]):
         assert dobackup.main() == 1
 
 
 def test_powerup_wrong_id():
-    with mock.patch('sys.argv', ['dobackup', '--powerup', non_existing_droplet_id]):
+    with mock.patch("sys.argv", ["dobackup", "--powerup", non_existing_droplet_id]):
         assert dobackup.main() == 1
 
 
 def test_main():
 
-    with mock.patch('sys.argv', ['dobackup', '--list-droplets']):
+    with mock.patch("sys.argv", ["dobackup", "--list-droplets"]):
         assert dobackup.main() == 0
-    with mock.patch('sys.argv', ['dobackup', '--list-snaps']):
+    with mock.patch("sys.argv", ["dobackup", "--list-snaps"]):
         assert dobackup.main() == 0
-    with mock.patch('sys.argv', ['dobackup', '--list-tags']):
+    with mock.patch("sys.argv", ["dobackup", "--list-tags"]):
         assert dobackup.main() == 0
-    with mock.patch('sys.argv', ['dobackup', '--list-backups']):
+    with mock.patch("sys.argv", ["dobackup", "--list-backups"]):
         assert dobackup.main() == 0
-    with mock.patch('sys.argv', ['dobackup', '--list-tagged']):
+    with mock.patch("sys.argv", ["dobackup", "--list-tagged"]):
         assert dobackup.main() == 0
-    with mock.patch('sys.argv', ['dobackup', '--list-older-than', '7']):
+    with mock.patch("sys.argv", ["dobackup", "--list-older-than", "7"]):
         assert dobackup.main() == 0
-    with mock.patch('sys.argv', ['dobackup', '--tag-droplet', non_existing_droplet_id]):
+    with mock.patch("sys.argv", ["dobackup", "--tag-droplet", non_existing_droplet_id]):
         assert dobackup.main() == 1
 
     # dobackup.run(token_id=None, init, list_drops, list_backups, list_snaps, list_tagged, list_tags,
