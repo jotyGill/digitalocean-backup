@@ -26,7 +26,7 @@ log = logging.getLogger()
 
 
 def parse_args(argv: List[str]) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Automated Offline Snapshots Of Digitalocean Droplets")
+    parser = argparse.ArgumentParser(description="Automated Offline Or Live Snapshots Of Digitalocean Droplets")
     parser.add_argument(
         "token_id",
         nargs="?",
@@ -237,7 +237,7 @@ def send_command(retries: int, obj: Any, method: str, *args, **kwargs) -> Any:
 
 def turn_it_off(droplet: digitalocean.Droplet) -> bool:
     if droplet.status == "off":
-        log.info("The Droplet '{!s}' Is Already Off".format(droplet))
+        log.info("The Droplet '{!s}' Is Already Powered Off".format(droplet))
         return True
     elif droplet.status == "active":
         log.info("Shutting Down : {!s}".format(droplet))
@@ -293,25 +293,32 @@ def snap_completed(snap_action: digitalocean.Action) -> bool:
 
 
 def turn_it_on(droplet: digitalocean.Droplet) -> bool:
-    log.info("Powering Up {!s}".format(droplet))
-    power_up_action_id = send_command(5, droplet, "power_on")["action"]["id"]
-    power_up_action = send_command(5, droplet, "get_action", power_up_action_id)
-    log.debug("power_up_action " + str(power_up_action) + str(type(power_up_action)))
-    power_up_outcome = wait_for_action(power_up_action, 3)
-    log.debug("power_up_outcome " + str(power_up_outcome))
-    if power_up_outcome:
-        for i in range(5):
-            time.sleep(2)
-            droplet.load()  # refresh droplet data
-            log.debug("droplet.status " + droplet.status)
-            if droplet.status == "active":
-                log.info("Powered Back Up {!s}".format(droplet))
-                return True
-        log.critical("DID NOT POWER UP BUT REPORTED 'powered_up'=='True' " + str(droplet))
-        return False
+    if droplet.status == "active":
+        log.info("The Droplet '{!s}' Is Already Powered Up".format(droplet))
+        return True
+    elif droplet.status == "off":
+        log.info("Powering Up {!s}".format(droplet))
+        power_up_action_id = send_command(5, droplet, "power_on")["action"]["id"]
+        power_up_action = send_command(5, droplet, "get_action", power_up_action_id)
+        log.debug("power_up_action " + str(power_up_action) + str(type(power_up_action)))
+        power_up_outcome = wait_for_action(power_up_action, 3)
+        log.debug("power_up_outcome " + str(power_up_outcome))
+        if power_up_outcome:
+            for i in range(5):
+                time.sleep(2)
+                droplet.load()  # refresh droplet data
+                log.debug("droplet.status " + droplet.status)
+                if droplet.status == "active":
+                    log.info("Powered Back Up {!s}".format(droplet))
+                    return True
+            log.critical("DID NOT POWER UP BUT REPORTED 'powered_up'=='True' " + str(droplet))
+            return False
 
-    log.critical("DID NOT POWER UP " + str(droplet))
-    return False
+        log.critical("DID NOT POWER UP " + str(droplet))
+        return False
+    else:
+        log.error("'droplet.status' SHOULD BE EITHER 'off' OR 'active'")
+        return False
 
 
 def find_old_backups(manager: digitalocean.Manager, older_than: int, tag_name: str) -> List[digitalocean.Snapshot]:
