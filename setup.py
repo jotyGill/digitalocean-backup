@@ -15,7 +15,7 @@ with open("README.md", encoding="utf-8") as readme_file:
 setuptools.setup(
     name="dobackup",
     version=__version__,
-    description="Automated offline snapshots of digitalocean droplets",
+    description="Automated Offline Or Live Snapshots Of Digitalocean Droplets",
     license="GNU General Public License v3 or later (GPLv3+)",
     author="JGill",
     zip_safe=False,

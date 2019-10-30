@@ -534,7 +534,7 @@ def run(
     keep: bool,
 ) -> int:
     try:
-        log.info("-------------------------START-------------------------\n\n")
+        log.info("-------------------------START-------------------------\n")
         if init:
             if set_tokens() is False:
                 return 1
@@ -680,8 +680,7 @@ def run(
             else:
                 log.warning("Please Use '--restore-to' To Provide The id Of " "Snapshot To Restore This Droplet To")
 
-        log.info("---------------------------END----------------------------")
-        log.info("\n\n")
+        log.info("---------------------------END----------------------------\n\n")
         return 0  # if all good, return 0
     except Exception as e:
         log.critical(e, exc_info=True)  # if errored at any time, mark CRITICAL and log traceback
