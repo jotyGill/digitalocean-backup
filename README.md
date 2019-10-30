@@ -14,7 +14,7 @@ backups only if new one is successful and to use a 'healthchecks' service to get
 ## Installation
 Install as a user without sudo. This installs it in ~/.local/bin/ make sure this path is in your $PATH.
 ``` bash
-python3 -m pip install --user dobackup --upgrade
+python3 -m pip install --user -U dobackup
 ```
 If not found, add the following to your .bashrc or .zshrc
 ``` bash
@@ -75,6 +75,7 @@ To backup a server using it's name or id.
 ``` bash
 dobackup --backup ubuntu-18-04
 dobackup --backup 1929129
+dobackup --live-backup ubuntu-18-04       # live backup, backup without shutting down the vm
 dobackup --backup ubuntu-18-04 --keep     # this won't be deleted with '--delete-older-than'
 ```
 
@@ -117,24 +118,34 @@ dobackup --delete-older-than 14
 ``` bash
 usage: dobackup [-h] [-v] [--init] [-l] [--list-backups] [-s] [--list-tagged]
                 [--list-tags] [--list-older-than LIST_OLDER_THAN]
-                [--tag-droplet TAG_DROPLET] [--untag-droplet UNTAG_DROPLET]
-                [--tag-name TAG_NAME] [--delete-older-than DELETE_OLDER_THAN]
-                [--delete-snap DELETE_SNAP] [--backup BACKUP] [--backup-all]
-                [--shutdown SHUTDOWN] [--powerup POWERUP]
-                [--restore-droplet RESTORE_DROP] [--restore-to RESTORE_TO]
-                [--keep]
+                [--backup BACKUP] [--backup-all] [--live-backup LIVE_BACKUP]
+                [--live-backup-all] [--tag-droplet TAG_DROPLET]
+                [--untag-droplet UNTAG_DROPLET] [--tag-name TAG_NAME]
+                [--delete-older-than DELETE_OLDER_THAN]
+                [--delete-snap DELETE_SNAP] [--shutdown SHUTDOWN]
+                [--powerup POWERUP] [--restore-droplet RESTORE_DROP]
+                [--restore-to RESTORE_TO] [--keep]
                 [token_id]
 
-Automated offline snapshots of digitalocean droplets
+Automated Offline Or Live Snapshots Of Digitalocean Droplets
 
 positional arguments:
-  token_id              Specify token to be used, default=0, supply if you
-                        have multiple DO accounts
+  token_id              Specify token number to be used, default=0, supply
+                        only if you have multiple Digitalocean accounts
 
 optional arguments:
   -h, --help            show this help message and exit
   -v, -V, --version     show programs version number and exit
   --init                Save token to .token file
+  --tag-name TAG_NAME   To be used with "--list-tags", "--tag-droplet" and "--
+                        backup-all", default value is "dobackup"
+  --keep                To keep backups for long term. "--delete-older-than"
+                        wont delete these. To be used with "--backup","--
+                        backup-all"
+
+Informational Args:
+  Arguments That Display Information
+
   -l, --list-droplets   List all droplets
   --list-backups        List all snapshots with "dobackup" in their name
   -s, --list-snaps      List all snapshots
@@ -142,28 +153,36 @@ optional arguments:
   --list-tags           List all used tags
   --list-older-than LIST_OLDER_THAN
                         List snaps older than, in days
-  --tag-droplet TAG_DROPLET
-                        Add tag to the provided droplet name or id
-  --untag-droplet UNTAG_DROPLET
-                        Remove tag from the provided droplet name or id
-  --tag-name TAG_NAME   To be used with "--list-tags", "--tag-server" and "--
-                        backup-all", default value is "dobackup"
-  --delete-older-than DELETE_OLDER_THAN
-                        Delete backups older than, in days
-  --delete-snap DELETE_SNAP
-                        Delete the snapshot with given name or id
-  --backup BACKUP       Shutdown, Backup, Then Restart the droplet with given
-                        name or id
-  --backup-all          Shutdown, Backup, Then Restart all droplets with "--
-                        tag-name"
-  --shutdown SHUTDOWN   Shutdown, the droplet with given name or id
-  --powerup POWERUP     Powerup, the droplet with given name or id
+
+Backup Args:
+  Arguments That Backup Or Restore Droplets
+
+  --backup BACKUP       Shutdown, Backup (snapshot), Then Restart the droplet
+                        with given name or id
+  --backup-all          Shutdown, Backup (snapshot), Then Restart all droplets
+                        with the given "--tag-name"
+  --live-backup LIVE_BACKUP
+                        Backup (snapshot), the droplet with given name or id,
+                        without shutting it down
+  --live-backup-all     Backup (snapshot), all droplets with the given "--tag-
+                        name", without shutting them down
   --restore-droplet RESTORE_DROP
                         Restore, the droplet with given name or id
   --restore-to RESTORE_TO
                         Snapshot id or name, to restore the droplet to
-  --keep                To keep backups for long term. "--delete-older-than"
-                        wont delete these. To be used with "--backup","--
-                        backup-all"
+
+Action Args:
+  Arguments That Perform Actions
+
+  --tag-droplet TAG_DROPLET
+                        Add tag to the provided droplet name or id
+  --untag-droplet UNTAG_DROPLET
+                        Remove tag from the provided droplet name or id
+  --delete-older-than DELETE_OLDER_THAN
+                        Delete backups older than, in days
+  --delete-snap DELETE_SNAP
+                        Delete the snapshot with given name or id
+  --shutdown SHUTDOWN   Shutdown, the droplet with given name or id
+  --powerup POWERUP     Powerup, the droplet with given name or id
 
 ```
