@@ -32,7 +32,7 @@ setuptools.setup(
         "snapshots",
     ],
     python_requires=">=3.5",
-    install_requires=["python-digitalocean"],
+    install_requires=["python-digitalocean", "requests"],
     tests_require=["mock", "pytest", "pytest-cov"],
     platforms=["GNU/Linux", "Ubuntu", "Debian", "Kali", "CentOS", "Arch", "Fedora"],
     packages=setuptools.find_packages(),
