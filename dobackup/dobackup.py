@@ -5,6 +5,8 @@ import datetime
 import json
 import logging
 import logging.handlers
+import os.path
+import shutil
 import sys
 import time
 from typing import Any, Dict, List
@@ -150,9 +152,6 @@ def set_tokens() -> bool:
 
 
 def install_zsh_completion() -> None:
-    import os.path
-    import shutil
-
     if os.path.exists(os.path.join(os.path.expanduser("~"), ".oh-my-zsh/custom/plugins/zsh-completions/src/")):
         log.info("Zsh-completions path exists, installing completions file '_dobackup'")
         shutil.copy(
