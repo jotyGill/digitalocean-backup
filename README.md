@@ -8,6 +8,7 @@ The script is designed to be used as a cron job as well. If any error occurs the
 exit code of 1. Very useful feature to ensure that the backups are successfully completed. I use it to delete older
 backups only if new one is successful and to use a 'healthchecks' service to get notified if a backup failed.
 (see cron examples)
+![dobackup](https://user-images.githubusercontent.com/8462091/67843798-96c57d00-faf4-11e9-8ce1-5596bf422a44.gif)
 
 ## Installation
 Install as a user without sudo. This installs it in ~/.local/bin/ make sure this path is in your $PATH.
