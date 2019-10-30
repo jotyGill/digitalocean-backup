@@ -68,12 +68,27 @@ def parse_args(argv: List[str]) -> argparse.Namespace:
     )
     parser.add_argument("--delete-snap", dest="delete_snap", type=str, help="Delete the snapshot with given name or id")
     parser.add_argument(
-        "--backup", dest="backup", type=str, help="Shutdown, Backup, Then Restart the droplet with given name or id"
+        "--backup",
+        dest="backup",
+        type=str,
+        help="Shutdown, Backup (snapshot), Then Restart the droplet with given name or id",
     )
     parser.add_argument(
         "--backup-all",
         dest="backup_all",
-        help='Shutdown, Backup, Then Restart all droplets with "--tag-name"',
+        help='Shutdown, Backup (snapshot), Then Restart all droplets with the given "--tag-name"',
+        action="store_true",
+    )
+    parser.add_argument(
+        "--live-backup",
+        dest="live_backup",
+        type=str,
+        help="Backup (snapshot), the droplet with given name or id, without shutting it down",
+    )
+    parser.add_argument(
+        "--live-backup-all",
+        dest="live_backup_all",
+        help='Backup (snapshot), all droplets with the given "--tag-name", without shutting them down',
         action="store_true",
     )
     parser.add_argument("--shutdown", dest="shutdown", type=str, help="Shutdown, the droplet with given name or id")
@@ -221,27 +236,34 @@ def send_command(retries: int, obj: Any, method: str, *args, **kwargs) -> Any:
 
 
 def turn_it_off(droplet: digitalocean.Droplet) -> bool:
-    log.info("Shutting Down : {!s}".format(droplet))
-    # send shutdown and capture that action's id
-    shut_action_id = send_command(5, droplet, "shutdown")["action"]["id"]
-    # print("shut_command: ", shut_command)
-    shut_action = send_command(5, droplet, "get_action", shut_action_id)
+    if droplet.status == "off":
+        log.info("The Droplet '{!s}' Is Already Off".format(droplet))
+        return True
+    elif droplet.status == "active":
+        log.info("Shutting Down : {!s}".format(droplet))
+        # send shutdown and capture that action's id
+        shut_action_id = send_command(5, droplet, "shutdown")["action"]["id"]
+        # print("shut_command: ", shut_command)
+        shut_action = send_command(5, droplet, "get_action", shut_action_id)
 
-    log.debug("shut_action {!s} {!s}".format(shut_action, type(shut_action)))
-    shut_outcome = wait_for_action(shut_action, 3)
-    log.debug("shut_outcome {}".format(shut_outcome))
-    if shut_outcome:
-        for i in range(50):
-            time.sleep(3)
-            send_command(5, droplet, "load")  # refresh droplet data, retry 5 times
-            log.debug("droplet.status {} i== {!s}".format(droplet.status, i))
-            if droplet.status == "off":
-                log.info("Shutdown Completed " + str(droplet))
-                return True
-        log.error("SHUTDOWN FAILED, REPORTED 'shut_outcome'=='True' " + str(droplet) + str(shut_action))
-        return False
+        log.debug("shut_action {!s} {!s}".format(shut_action, type(shut_action)))
+        shut_outcome = wait_for_action(shut_action, 3)
+        log.debug("shut_outcome {}".format(shut_outcome))
+        if shut_outcome:
+            for i in range(50):
+                time.sleep(3)
+                send_command(5, droplet, "load")  # refresh droplet data, retry 5 times
+                log.debug("droplet.status {} i== {!s}".format(droplet.status, i))
+                if droplet.status == "off":
+                    log.info("Shutdown Completed " + str(droplet))
+                    return True
+            log.error("SHUTDOWN FAILED, REPORTED 'shut_outcome'=='True' " + str(droplet) + str(shut_action))
+            return False
+        else:
+            log.error("SHUTDOWN FAILED " + str(droplet) + str(shut_action))
+            return False
     else:
-        log.error("SHUTDOWN FAILED " + str(droplet) + str(shut_action))
+        log.error("'droplet.status' SHOULD BE EITHER 'off' OR 'active'")
         return False
 
 
@@ -251,12 +273,7 @@ def start_backup(droplet: digitalocean.Droplet, keep: bool, tag_name: str) -> di
         backup_str = "--" + tag_name + "-keep--"
     snap_name = droplet.name + backup_str + str(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
     # snap_name = droplet.name + "--dobackup--2018-05-02 12:37:52"
-    if droplet.status == "active":
-        turn_it_off(droplet)
-    elif droplet.status == "off":
-        log.info("The Droplet Is Already Off : " + str(droplet) + " Taking Snapshot")
-    else:
-        log.error("'droplet.status' SHOULD BE EITHER 'off' OR 'active'")
+
     log.info("Taking snapshot of " + droplet.name)
     # power_off is hard power off dont want that
     snap_action_id = send_command(5, droplet, "take_snapshot", snap_name, power_off=False)["action"]["id"]
@@ -491,6 +508,8 @@ def run(
     delete_snap: str,
     backup: str,
     backup_all: bool,
+    live_backup: str,
+    live_backup_all: bool,
     shutdown: str,
     powerup: str,
     restore_drop: str,
@@ -565,6 +584,7 @@ def run(
             if droplet is None:
                 return 1
             original_status = droplet.status  # active or off
+            turn_it_off(droplet)
             snap_action = start_backup(droplet, keep, tag_name)
             snap_done = snap_completed(snap_action)
             if original_status != "off":
@@ -572,6 +592,38 @@ def run(
             if not snap_done:
                 log.error("SNAPSHOT FAILED {!s} {!s}".format(snap_action, droplet))
         if backup_all:
+            # stores all {"snap_action": snap_action, "droplet_id": droplet}
+            snap_and_drop_ids = []
+            tagged_droplets = get_tagged(manager, tag_name=tag_name)
+
+            if tagged_droplets:  # doplets found with the --tag-name
+                for drop in tagged_droplets:
+                    droplet = send_command(5, manager, "get_droplet", drop.id)
+                    original_status = droplet.status  # active or off
+                    turn_it_off(droplet)
+                    snap_action = start_backup(droplet, keep, tag_name)
+                    snap_and_drop_ids.append(
+                        {"snap_action": snap_action, "droplet_id": droplet.id, "original_status": original_status}
+                    )
+                log.info("Backups Started, snap_and_drop_ids: {!s}".format(snap_and_drop_ids))
+                for snap_id_pair in snap_and_drop_ids:
+                    snap_done = snap_completed(snap_id_pair["snap_action"])
+                    # print("snap_action and droplet_id", snap_id_pair)
+                    if snap_id_pair["original_status"] != "off":
+                        turn_it_on(send_command(5, manager, "get_droplet", (snap_id_pair["droplet_id"])))
+                    if not snap_done:
+                        log.error("SNAPSHOT FAILED {!s} {!s}".format(snap_action, droplet))
+            else:  # no doplets with the --tag-name
+                log.warning("NO DROPLET FOUND WITH THE TAG NAME " + tag_name)
+        if live_backup:
+            droplet = find_droplet(live_backup, manager)
+            if droplet is None:
+                return 1
+            snap_action = start_backup(droplet, keep, tag_name)
+            snap_done = snap_completed(snap_action)
+            if not snap_done:
+                log.error("SNAPSHOT FAILED {!s} {!s}".format(snap_action, droplet))
+        if live_backup_all:
             # stores all {"snap_action": snap_action, "droplet_id": droplet}
             snap_and_drop_ids = []
             tagged_droplets = get_tagged(manager, tag_name=tag_name)
@@ -588,8 +640,6 @@ def run(
                 for snap_id_pair in snap_and_drop_ids:
                     snap_done = snap_completed(snap_id_pair["snap_action"])
                     # print("snap_action and droplet_id", snap_id_pair)
-                    if snap_id_pair["original_status"] != "off":
-                        turn_it_on(send_command(5, manager, "get_droplet", (snap_id_pair["droplet_id"])))
                     if not snap_done:
                         log.error("SNAPSHOT FAILED {!s} {!s}".format(snap_action, droplet))
             else:  # no doplets with the --tag-name
@@ -639,6 +689,8 @@ def main() -> int:
         args.delete_snap,
         args.backup,
         args.backup_all,
+        args.live_backup,
+        args.live_backup_all,
         args.shutdown,
         args.powerup,
         args.restore_drop,
