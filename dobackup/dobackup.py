@@ -26,7 +26,7 @@ log = logging.getLogger()
 
 
 def parse_args(argv: List[str]) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Automated offline snapshots of digitalocean droplets")
+    parser = argparse.ArgumentParser(description="Automated Offline Snapshots Of Digitalocean Droplets")
     parser.add_argument(
         "token_id",
         nargs="?",
@@ -517,7 +517,7 @@ def run(
             list_snapshots(manager)
         if list_tagged:
             tagged_droplets = get_tagged(manager, tag_name=tag_name)
-            log.info("Listing All The Tagged Droplets, with the tag of : " + tag_name)
+            log.info("Listing All The Tagged Droplets, With The Tag : '{}'".format(tag_name))
             log.info(tagged_droplets)
         if list_tags:
             list_all_tags(manager)
@@ -527,7 +527,7 @@ def run(
                 return 1
             do_tag_droplet(do_token, str(droplet.id), tag_name)
             tagged_droplets = get_tagged(manager, tag_name=tag_name)
-            log.info("Now, Droplets Tagged With : {} Are :".format(tag_name))
+            log.info("Now, Droplets Tagged With : '{}' Are :".format(tag_name))
             log.info(tagged_droplets)
         if untag_droplet:
             droplet = find_droplet(untag_droplet, manager)
@@ -536,7 +536,7 @@ def run(
             if do_untag_droplet(do_token, str(droplet.id), tag_name) is False:
                 return 1
             tagged_droplets = get_tagged(manager, tag_name=tag_name)
-            log.info("Now, droplets tagged with : " + tag_name + " are :")
+            log.info("Now, Droplets Tagged With : '{}' Are :".format(tag_name))
             log.info(tagged_droplets)
         if delete_older_than or delete_older_than == 0:  # even accept value 0
             old_backups = find_old_backups(manager, delete_older_than, tag_name)
