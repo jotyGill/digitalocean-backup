@@ -31,28 +31,58 @@ def parse_args(argv: List[str]) -> argparse.Namespace:
         "token_id",
         nargs="?",
         help="Specify token number to be used, default=0, supply only if \
-    you have multiple DO accounts",
+    you have multiple Digitalocean accounts",
         default=0,
     )
     parser.add_argument("-v", "-V", "--version", action="version", version="dobackup " + __version__)
     parser.add_argument("--init", dest="init", help="Save token to .token file", action="store_true")
-    parser.add_argument("-l", "--list-droplets", dest="list_droplets", help="List all droplets", action="store_true")
-    parser.add_argument(
+
+    info_args = parser.add_argument_group("Infomational Args", "Arguments That Display Information")
+    info_args.add_argument("-l", "--list-droplets", dest="list_droplets", help="List all droplets", action="store_true")
+    info_args.add_argument(
         "--list-backups",
         dest="list_backups",
         help='List all snapshots with "dobackup" in their name',
         action="store_true",
     )
-    parser.add_argument("-s", "--list-snaps", dest="list_snaps", help="List all snapshots", action="store_true")
-    parser.add_argument(
+    info_args.add_argument("-s", "--list-snaps", dest="list_snaps", help="List all snapshots", action="store_true")
+    info_args.add_argument(
         "--list-tagged", dest="list_tagged", help='List droplets using "--tag-name"', action="store_true"
     )
-    parser.add_argument("--list-tags", dest="list_tags", help="List all used tags", action="store_true")
-    parser.add_argument("--list-older-than", dest="list_older_than", type=int, help="List snaps older than, in days")
-    parser.add_argument(
+    info_args.add_argument("--list-tags", dest="list_tags", help="List all used tags", action="store_true")
+    info_args.add_argument("--list-older-than", dest="list_older_than", type=int, help="List snaps older than, in days")
+
+    backup_args = parser.add_argument_group("Backup Args", "Arguments That Backup Or Restore Droplets")
+    backup_args.add_argument(
+        "--backup",
+        dest="backup",
+        type=str,
+        help="Shutdown, Backup (snapshot), Then Restart the droplet with given name or id",
+    )
+    backup_args.add_argument(
+        "--backup-all",
+        dest="backup_all",
+        help='Shutdown, Backup (snapshot), Then Restart all droplets with the given "--tag-name"',
+        action="store_true",
+    )
+    backup_args.add_argument(
+        "--live-backup",
+        dest="live_backup",
+        type=str,
+        help="Backup (snapshot), the droplet with given name or id, without shutting it down",
+    )
+    backup_args.add_argument(
+        "--live-backup-all",
+        dest="live_backup_all",
+        help='Backup (snapshot), all droplets with the given "--tag-name", without shutting them down',
+        action="store_true",
+    )
+
+    action_args = parser.add_argument_group("Action Args", "Arguments That Perform Actions")
+    action_args.add_argument(
         "--tag-droplet", dest="tag_droplet", type=str, help="Add tag to the provided droplet name or id"
     )
-    parser.add_argument(
+    action_args.add_argument(
         "--untag-droplet", dest="untag_droplet", type=str, help="Remove tag from the provided droplet name or id"
     )
     parser.add_argument(
@@ -63,40 +93,20 @@ def parse_args(argv: List[str]) -> argparse.Namespace:
     default value is "dobackup"',
         default="dobackup",
     )
-    parser.add_argument(
+    action_args.add_argument(
         "--delete-older-than", dest="delete_older_than", type=int, help="Delete backups older than, in days"
     )
-    parser.add_argument("--delete-snap", dest="delete_snap", type=str, help="Delete the snapshot with given name or id")
-    parser.add_argument(
-        "--backup",
-        dest="backup",
-        type=str,
-        help="Shutdown, Backup (snapshot), Then Restart the droplet with given name or id",
+    action_args.add_argument(
+        "--delete-snap", dest="delete_snap", type=str, help="Delete the snapshot with given name or id"
     )
-    parser.add_argument(
-        "--backup-all",
-        dest="backup_all",
-        help='Shutdown, Backup (snapshot), Then Restart all droplets with the given "--tag-name"',
-        action="store_true",
+    action_args.add_argument(
+        "--shutdown", dest="shutdown", type=str, help="Shutdown, the droplet with given name or id"
     )
-    parser.add_argument(
-        "--live-backup",
-        dest="live_backup",
-        type=str,
-        help="Backup (snapshot), the droplet with given name or id, without shutting it down",
-    )
-    parser.add_argument(
-        "--live-backup-all",
-        dest="live_backup_all",
-        help='Backup (snapshot), all droplets with the given "--tag-name", without shutting them down',
-        action="store_true",
-    )
-    parser.add_argument("--shutdown", dest="shutdown", type=str, help="Shutdown, the droplet with given name or id")
-    parser.add_argument("--powerup", dest="powerup", type=str, help="Powerup, the droplet with given name or id")
-    parser.add_argument(
+    action_args.add_argument("--powerup", dest="powerup", type=str, help="Powerup, the droplet with given name or id")
+    backup_args.add_argument(
         "--restore-droplet", dest="restore_drop", type=str, help="Restore, the droplet with given name or id"
     )
-    parser.add_argument(
+    backup_args.add_argument(
         "--restore-to", dest="restore_to", type=str, help="Snapshot id or name, to restore the droplet to"
     )
     parser.add_argument(
