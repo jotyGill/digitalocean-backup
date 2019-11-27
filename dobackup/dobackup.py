@@ -39,7 +39,7 @@ def parse_args(argv: List[str]) -> argparse.Namespace:
     parser.add_argument("-v", "-V", "--version", action="version", version="dobackup " + __version__)
     parser.add_argument("--init", dest="init", help="Save token to .token file", action="store_true")
 
-    info_args = parser.add_argument_group("Infomational Args", "Arguments That Display Information")
+    info_args = parser.add_argument_group("Informational Args", "Arguments That Display Information")
     info_args.add_argument("-l", "--list-droplets", dest="list_droplets", help="List all droplets", action="store_true")
     info_args.add_argument(
         "--list-backups",
