@@ -12,6 +12,8 @@ backups only if new one is successful and to use a 'healthchecks' service to get
 **NOTE: The currently published pypi version of API wrapper [python-digitalocean] has a bug, which recently started breaking functionality.**
 **Please update dobackup to the latest version (2.1.1) which is temporarily using a fork I published as [python-digitalocean-latest]**
 
+**RUN: `python3 -m pip uninstall python-digitalocean`  then `python3 -m pip install --user -U dobackup`
+
 ![dobackup](https://user-images.githubusercontent.com/8462091/67843798-96c57d00-faf4-11e9-8ce1-5596bf422a44.gif)
 
 ## Installation
