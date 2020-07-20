@@ -104,6 +104,7 @@ dobackup --restore-droplet ubuntu-18-04 --restore-to "ubuntu-18-04--dobackup--20
 To delete a specific snapshot.
 ``` bash
 dobackup --delete-snap "ubuntu-1gb-sgp1-01--dobackup--2018-05-31 17:43:11"   # put snap name or id
+dobackup --delete-snap "111111111,222222222,3333333333"     # comma seperated multiple ids or names
 ```
 
 To delete all old backups taken with dobackup.

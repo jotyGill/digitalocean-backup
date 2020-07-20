@@ -9,7 +9,7 @@ import os.path
 import shutil
 import sys
 import time
-from typing import Any, Dict, List
+from typing import Any, List
 
 import digitalocean
 import requests
@@ -99,7 +99,10 @@ def parse_args(argv: List[str]) -> argparse.Namespace:
         "--delete-older-than", dest="delete_older_than", type=int, help="Delete backups older than, in days"
     )
     action_args.add_argument(
-        "--delete-snap", dest="delete_snap", type=str, help="Delete the snapshot with given name or id"
+        "--delete-snap",
+        dest="delete_snap",
+        type=str,
+        help="Snapshot(s) name or id. e.g --delete-snap 111111 or --delete-snap '111111,222222,333333' "
     )
     action_args.add_argument(
         "--shutdown", dest="shutdown", type=str, help="Shutdown, the droplet with given name or id"
@@ -199,9 +202,17 @@ def run(
             else:
                 log.info("No Snapshot Is Old Enough To be Deleted")
         if delete_snap:
-            snap = find_snapshot(delete_snap, manager, do_token)
-            if snap:
-                delete_snapshot(snap)
+            # if multiple snaps are supplied
+            if "," in delete_snap:
+                multiple_snaps = delete_snap.split(",")
+                for each_snap in multiple_snaps:
+                    snap = find_snapshot(each_snap.strip(), manager, do_token)
+                    if snap:
+                        delete_snapshot(snap)
+            else:
+                snap = find_snapshot(delete_snap, manager, do_token)
+                if snap:
+                    delete_snapshot(snap)
         if list_older_than or list_older_than == 0:
             old_backups = find_old_backups(manager, list_older_than, tag_name)
             log.info(
@@ -545,7 +556,7 @@ def find_old_backups(manager: digitalocean.Manager, older_than: int, tag_name: s
     for each_snapshot in send_command(5, manager, "get_droplet_snapshots"):
         # print(each_snapshot.name, each_snapshot.created_at, each_snapshot.id)
         if tag_str in each_snapshot.name:
-            backed_on = each_snapshot.name[each_snapshot.name.find(tag_str) + len(tag_str) :]
+            backed_on = each_snapshot.name[each_snapshot.name.find(tag_str) + len(tag_str):]
             # print("backed_on", backed_on)
             backed_on_date = datetime.datetime.strptime(backed_on, "%Y-%m-%d %H:%M:%S")
             if backed_on_date < last_backup_to_keep:
