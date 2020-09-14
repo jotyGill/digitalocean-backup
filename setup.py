@@ -1,12 +1,6 @@
-import sys
-
 import setuptools
 
 from dobackup import __version__
-
-if sys.version_info < (3, 5):
-    sys.stderr.write("ERROR: dobackup requires Python 3.5 or above." + "Install using 'pip3' instead of just 'pip' \n")
-    sys.exit(1)
 
 with open("README.md", encoding="utf-8") as readme_file:
     full_description = readme_file.read()
@@ -52,5 +46,6 @@ setuptools.setup(
         "Programming Language :: Python :: 3 :: Only",
         "Programming Language :: Python :: 3.5",
         "Programming Language :: Python :: 3.6",
+        "Programming Language :: Python :: 3.7"
     ],
 )

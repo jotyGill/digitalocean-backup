@@ -102,7 +102,7 @@ def parse_args(argv: List[str]) -> argparse.Namespace:
         "--delete-snap",
         dest="delete_snap",
         type=str,
-        help="Snapshot(s) name or id. e.g --delete-snap 111111 or --delete-snap '111111,222222,333333' "
+        help="Snapshot(s) by name or id. e.g --delete-snap 111111 or --delete-snap '111111,222222,333333' "
     )
     action_args.add_argument(
         "--shutdown", dest="shutdown", type=str, help="Shutdown, the droplet with given name or id"

@@ -182,7 +182,8 @@ Action Args:
   --delete-older-than DELETE_OLDER_THAN
                         Delete backups older than, in days
   --delete-snap DELETE_SNAP
-                        Delete the snapshot with given name or id
+                        Snapshot(s) by name or id. e.g --delete-snap 111111 or
+                        --delete-snap '111111,222222,333333'
   --shutdown SHUTDOWN   Shutdown, the droplet with given name or id
   --powerup POWERUP     Powerup, the droplet with given name or id
 
