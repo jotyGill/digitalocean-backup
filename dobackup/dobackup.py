@@ -660,30 +660,15 @@ def find_droplet(droplet_str: str, manager: digitalocean.Manager) -> digitalocea
 
 
 # Note: Snapshot.resource_id and Snapshot.id are str not int
-def find_snapshot(
-    snap_id_or_name: str, manager: digitalocean.Manager, do_token: str, droplet_id=000000
-) -> digitalocean.Snapshot:
-    snap_id_or_name = str(snap_id_or_name)  # for comparisions
+def find_snapshot(snap_id_or_name: str, manager: digitalocean.Manager, do_token: str) -> digitalocean.Snapshot:
+    snap_id_or_name = str(snap_id_or_name)  # for comparisons
     for snap in send_command(5, manager, "get_all_snapshots"):
-        # print(type(snap.resource_id), type(droplet_id))
-        if droplet_id == 000000:  # meaning, doesn't matter
-            if snap_id_or_name == str(snap.id) or snap_id_or_name == snap.name:
-                # snap_obj = digitalocean.Snapshot.get_object(do_token, snap.id)
-                snap_obj = send_command(5, digitalocean.Snapshot, "get_object", do_token, snap.id)
-                # log.info("snap id and name {!s} {!s}".format(snap.id, snap.name))
-                return snap_obj
-        # to filter snapshots for a specific droplet
-        elif droplet_id == int(snap.resource_id):
+        if snap_id_or_name == str(snap.id) or snap_id_or_name == snap.name:
+            # snap_obj = digitalocean.Snapshot.get_object(do_token, snap.id)
+            snap_obj = send_command(5, digitalocean.Snapshot, "get_object", do_token, snap.id)
             # log.info("snap id and name {!s} {!s}".format(snap.id, snap.name))
-            if snap_id_or_name == str(snap.id) or snap_id_or_name == snap.name:
-                snap_obj = send_command(5, digitalocean.Snapshot, "get_object", do_token, snap.id)
-                return snap_obj
-    if droplet_id == 000000:
-        log.error("NO SNAPSHOT FOUND WITH NAME OR ID OF {!s}, EXITING".format(snap_id_or_name))
-    else:
-        log.error(
-            "NO SNAPSHOT FOUND WITH NAME OR ID OF {!s} FOR DROPLET ID {!s}, EXITING".format(snap_id_or_name, droplet_id)
-        )
+            return snap_obj
+    log.error("NO SNAPSHOT FOUND WITH NAME OR ID OF {!s}, EXITING".format(snap_id_or_name))
 
 
 def list_taken_backups(manager: digitalocean.Manager, tag_name: str) -> None:
@@ -707,11 +692,11 @@ def list_taken_backups(manager: digitalocean.Manager, tag_name: str) -> None:
 def restore_droplet(
     droplet: digitalocean.Droplet, snapshot: digitalocean.Snapshot, manager: digitalocean.Manager, do_token: str
 ):
-    snap = find_snapshot(snapshot, manager, do_token, droplet_id=droplet.id)
+    snap = find_snapshot(snapshot, manager, do_token)
 
     if snap:
-        log.info(str(snap) + " Is A Valid Snapshot For " + droplet.name + "\n")
-        confirmation = input("Are You Sure You Want To Restore ? (if so, type 'yes') ")
+        log.info(str(snap) + " Is A Valid Snapshot\n")
+        confirmation = input(f"Are You Sure You Want To Restore {droplet.name}? (if so, type 'yes') ")
         if confirmation.lower() == "yes":
             log.info("Starting Restore Process")
             restore_act_id = send_command(5, droplet, "restore", (int(snap.id)))["action"]["id"]
@@ -723,7 +708,7 @@ def restore_droplet(
                 log.error("RESTORE FAILED " + str(restore_act))
 
     if not snap:
-        log.error(str(snapshot) + " IS NOT A VALID SNAPSHOT FOR " + droplet.name)
+        log.error(str(snapshot) + " IS NOT A VALID SNAPSHOT")
 
 
 if __name__ == "__main__":
